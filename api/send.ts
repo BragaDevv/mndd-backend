@@ -1,7 +1,10 @@
-import express, { Request, Response } from 'express';
-import admin from 'firebase-admin';
-import bodyParser from 'body-parser';
-import { QueryDocumentSnapshot } from 'firebase-admin/firestore'; // ✅ Importa o tipo corretamente
+import express, { Request, Response } from "express";
+import admin from "firebase-admin";
+import bodyParser from "body-parser";
+import { QueryDocumentSnapshot } from "firebase-admin/firestore"; // ✅ Importa o tipo corretamente
+
+import dotenv from "dotenv";
+dotenv.config();
 
 const app = express();
 app.use(bodyParser.json());
@@ -25,26 +28,30 @@ try {
 // ✅ Inicializa Firebase se ainda não iniciado
 if (!admin.apps.length) {
   admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
+    credential: admin.credential.cert(serviceAccount),
   });
   console.log("✅ Firebase Admin inicializado.");
 }
 
-app.post('/send', async (req: Request, res: Response) => {
+app.post("/send", async (req: Request, res: Response) => {
   const { title, body, image } = req.body;
 
   if (!title || !body) {
-    return res.status(400).json({ error: "Campos 'title' e 'body' são obrigatórios." });
+    return res
+      .status(400)
+      .json({ error: "Campos 'title' e 'body' são obrigatórios." });
   }
 
   try {
-    const snapshot = await admin.firestore().collection('tokens').get();
+    const snapshot = await admin.firestore().collection("tokens").get();
     const tokens = snapshot.docs
       .map((doc: QueryDocumentSnapshot) => doc.data().token)
       .filter(Boolean);
 
     if (tokens.length === 0) {
-      return res.status(200).json({ success: true, message: "Nenhum token encontrado." });
+      return res
+        .status(200)
+        .json({ success: true, message: "Nenhum token encontrado." });
     }
 
     const message = {
