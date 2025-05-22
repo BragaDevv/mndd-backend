@@ -3,20 +3,20 @@ import admin from "firebase-admin";
 import bodyParser from "body-parser";
 import { QueryDocumentSnapshot } from "firebase-admin/firestore";
 import dotenv from "dotenv";
+import fetch from "node-fetch"; // ✅ necessário para chamadas HTTP
 
 dotenv.config();
 
 const app = express();
 app.use(bodyParser.json());
 
-// ✅ Verifica a variável de ambiente
+// Firebase Admin setup (mantém para acessar Firestore)
 const jsonString = process.env.GOOGLE_CREDENTIALS;
 if (!jsonString) {
   console.error("❌ GOOGLE_CREDENTIALS não definida.");
   process.exit(1);
 }
 
-// ✅ Parse das credenciais
 let serviceAccount: admin.ServiceAccount;
 try {
   serviceAccount = JSON.parse(jsonString);
@@ -25,7 +25,6 @@ try {
   process.exit(1);
 }
 
-// ✅ Inicializa o Firebase Admin
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
@@ -33,7 +32,7 @@ if (!admin.apps.length) {
   console.log("✅ Firebase Admin inicializado.");
 }
 
-// ✅ Rota principal para envio
+// ✅ NOVA ROTA usando Expo Push API
 app.post("/send", async (req: Request, res: Response) => {
   const { title, body, image } = req.body;
 
@@ -42,32 +41,45 @@ app.post("/send", async (req: Request, res: Response) => {
   }
 
   try {
-    // 🔄 Usa a coleção correta agora: pushTokens
     const snapshot = await admin.firestore().collection("pushTokens").get();
 
     const tokens = snapshot.docs
       .map((doc: QueryDocumentSnapshot) => doc.data().token)
-      .filter(Boolean);
+      .filter((t) => typeof t === "string" && t.startsWith("ExponentPushToken["));
 
     if (tokens.length === 0) {
-      return res.status(200).json({ success: true, message: "Nenhum token encontrado." });
+      return res.status(200).json({ success: true, message: "Nenhum token válido encontrado." });
     }
 
-    const message = {
-      notification: { title, body, image },
-      tokens,
-    };
+    const messages = tokens.map((token) => ({
+      to: token,
+      sound: "default",
+      title,
+      body,
+      ...(image ? { image } : {}),
+    }));
 
-    const response = await admin.messaging().sendEachForMulticast(message);
-    console.log(`✅ Notificação enviada para ${tokens.length} dispositivos.`);
-    res.json({ success: true, response });
+    const expoResponse = await fetch("https://exp.host/--/api/v2/push/send", {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Accept-Encoding": "gzip, deflate",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(messages),
+    });
+
+    const result = await expoResponse.json();
+    console.log("📨 Expo Push Response:", result);
+
+    res.json({ success: true, sent: tokens.length, expoResult: result });
   } catch (error) {
     console.error("❌ Erro ao enviar notificação:", error);
     res.status(500).json({ error: "Erro ao enviar notificação." });
   }
 });
 
-// ✅ Porta dinâmica para Render ou local
+// Porta dinâmica (para Render)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 API rodando na porta ${PORT}`);
