@@ -1,9 +1,9 @@
 import express, { Request, Response } from "express";
 import admin from "firebase-admin";
 import bodyParser from "body-parser";
-import { QueryDocumentSnapshot } from "firebase-admin/firestore"; // ✅ Importa o tipo corretamente
-
+import { QueryDocumentSnapshot } from "firebase-admin/firestore";
 import dotenv from "dotenv";
+
 dotenv.config();
 
 const app = express();
@@ -16,7 +16,7 @@ if (!jsonString) {
   process.exit(1);
 }
 
-// ✅ Parse do JSON com try/catch opcional
+// ✅ Parse das credenciais
 let serviceAccount: admin.ServiceAccount;
 try {
   serviceAccount = JSON.parse(jsonString);
@@ -25,7 +25,7 @@ try {
   process.exit(1);
 }
 
-// ✅ Inicializa Firebase se ainda não iniciado
+// ✅ Inicializa o Firebase Admin
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
@@ -33,25 +33,24 @@ if (!admin.apps.length) {
   console.log("✅ Firebase Admin inicializado.");
 }
 
+// ✅ Rota principal para envio
 app.post("/send", async (req: Request, res: Response) => {
   const { title, body, image } = req.body;
 
   if (!title || !body) {
-    return res
-      .status(400)
-      .json({ error: "Campos 'title' e 'body' são obrigatórios." });
+    return res.status(400).json({ error: "Campos 'title' e 'body' são obrigatórios." });
   }
 
   try {
-    const snapshot = await admin.firestore().collection("tokens").get();
+    // 🔄 Usa a coleção correta agora: pushTokens
+    const snapshot = await admin.firestore().collection("pushTokens").get();
+
     const tokens = snapshot.docs
       .map((doc: QueryDocumentSnapshot) => doc.data().token)
       .filter(Boolean);
 
     if (tokens.length === 0) {
-      return res
-        .status(200)
-        .json({ success: true, message: "Nenhum token encontrado." });
+      return res.status(200).json({ success: true, message: "Nenhum token encontrado." });
     }
 
     const message = {
@@ -68,7 +67,7 @@ app.post("/send", async (req: Request, res: Response) => {
   }
 });
 
-// ✅ Porta dinâmica (Render define process.env.PORT)
+// ✅ Porta dinâmica para Render ou local
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 API rodando na porta ${PORT}`);
