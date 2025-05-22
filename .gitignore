@@ -1,3 +1,16 @@
+# Ignora dependências do Node.js
+node_modules/
+
+# Ignora arquivos compilados
 dist/
+
+# Ignora credenciais sensíveis
 firebase-service-account.json
-node_modules
+
+# Ignora arquivos temporários e do sistema
+.DS_Store
+.env
+*.log
+
+# VSCode configs locais
+.vscode/
