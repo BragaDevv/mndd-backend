@@ -34,24 +34,35 @@ if (!admin.apps.length) {
 
 // ✅ NOVA ROTA usando Expo Push API
 app.post("/send", async (req: Request, res: Response) => {
-  const { title, body, image } = req.body;
+  const { title, body, image, to, tokens } = req.body;
 
   if (!title || !body) {
     return res.status(400).json({ error: "Campos 'title' e 'body' são obrigatórios." });
   }
 
   try {
-    const snapshot = await admin.firestore().collection("pushTokens").get();
+    let expoTokens: string[] = [];
 
-    const tokens = snapshot.docs
-      .map((doc: QueryDocumentSnapshot) => doc.data().token)
-      .filter((t) => typeof t === "string" && t.startsWith("ExponentPushToken["));
+    // Prioridade para tokens enviados no corpo
+    if (Array.isArray(tokens)) {
+      expoTokens = tokens.filter(
+        (t) => typeof t === "string" && t.startsWith("ExponentPushToken[")
+      );
+    } else if (typeof to === "string" && to.startsWith("ExponentPushToken[")) {
+      expoTokens = [to];
+    } else {
+      // fallback: busca todos os tokens salvos no Firestore
+      const snapshot = await admin.firestore().collection("pushTokens").get();
+      expoTokens = snapshot.docs
+        .map((doc: QueryDocumentSnapshot) => doc.data().token)
+        .filter((t) => typeof t === "string" && t.startsWith("ExponentPushToken["));
+    }
 
-    if (tokens.length === 0) {
+    if (expoTokens.length === 0) {
       return res.status(200).json({ success: true, message: "Nenhum token válido encontrado." });
     }
 
-    const messages = tokens.map((token) => ({
+    const messages = expoTokens.map((token) => ({
       to: token,
       sound: "default",
       title,
@@ -70,15 +81,14 @@ app.post("/send", async (req: Request, res: Response) => {
     });
 
     const result = await expoResponse.json();
-    console.log("📨 Expo Push Response:", result);
+    console.log("\uD83D\uDCE8 Expo Push Response:", result);
 
-    res.json({ success: true, sent: tokens.length, expoResult: result });
+    res.json({ success: true, sent: expoTokens.length, expoResult: result });
   } catch (error) {
-    console.error("❌ Erro ao enviar notificação:", error);
+    console.error("\u274C Erro ao enviar notificação:", error);
     res.status(500).json({ error: "Erro ao enviar notificação." });
   }
 });
-
 // Porta dinâmica (para Render)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
