@@ -1,12 +1,13 @@
-// api/versiculo.ts
-import express, { Request, Response } from "express";
+import { Request, Response } from "express";
 import admin from "firebase-admin";
 import fetch from "node-fetch";
-import versiculos from "../data/versiculos.json"; // você vai criar isso também
+import versiculos from "../data/versiculos.json";
 
-const router = express.Router();
+export default async function handler(req: Request, res: Response) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Método não permitido" });
+  }
 
-export default async (req: Request, res: Response) => {
   try {
     const dia = new Date().getDate();
     const versiculo = versiculos[dia % versiculos.length];
@@ -25,7 +26,6 @@ export default async (req: Request, res: Response) => {
       sound: "default",
       title: "📖 Versículo do Dia",
       body: `${versiculo.texto} (${versiculo.livro} ${versiculo.capitulo}:${versiculo.versiculo})`,
-
     }));
 
     const expoResponse = await fetch("https://exp.host/--/api/v2/push/send", {
@@ -45,4 +45,4 @@ export default async (req: Request, res: Response) => {
     console.error("❌ Erro ao enviar versículo:", error);
     res.status(500).json({ error: "Erro interno ao enviar versículo." });
   }
-};
+}
