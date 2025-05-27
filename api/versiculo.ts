@@ -24,7 +24,8 @@ export default async (req: Request, res: Response) => {
       to: token,
       sound: "default",
       title: "📖 Versículo do Dia",
-      body: versiculo.texto,
+      body: `${versiculo.texto} (${versiculo.livro} ${versiculo.capitulo}:${versiculo.versiculo})`,
+
     }));
 
     const expoResponse = await fetch("https://exp.host/--/api/v2/push/send", {
