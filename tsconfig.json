@@ -5,6 +5,7 @@
     "outDir": "dist",
     "rootDir": "api",
     "strict": true,
+    "resolveJsonModule": true,
     "esModuleInterop": true
   },
   "include": ["api"]
