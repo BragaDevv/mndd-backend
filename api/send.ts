@@ -3,6 +3,7 @@ import admin from "firebase-admin";
 import bodyParser from "body-parser";
 import dotenv from "dotenv";
 import fetch from "node-fetch";
+import versiculoHoraHandler from "./versiculoHora"; //
 
 dotenv.config();
 
@@ -92,6 +93,9 @@ app.post("/send", async (req: Request, res: Response) => {
     res.status(500).json({ error: "Erro ao enviar notificação." });
   }
 });
+
+// ✅ Registra a rota do horário do versículo
+app.all("/versiculo-hora", versiculoHoraHandler);
 
 // Porta dinâmica (Render)
 const PORT = process.env.PORT || 3000;
