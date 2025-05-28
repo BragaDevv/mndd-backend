@@ -9,7 +9,7 @@ dotenv.config();
 const app = express();
 app.use(bodyParser.json());
 
-// Firebase Admin setup
+// Inicialização do Firebase Admin
 const jsonString = process.env.GOOGLE_CREDENTIALS;
 if (!jsonString) {
   console.error("❌ GOOGLE_CREDENTIALS não definida.");
@@ -31,7 +31,7 @@ if (!admin.apps.length) {
   console.log("✅ Firebase Admin inicializado.");
 }
 
-// ROTA /send para notificação personalizada
+// ROTA /send para envio de notificações
 app.post("/send", async (req: Request, res: Response) => {
   const { title, body, image, to, tokens } = req.body;
 
@@ -42,6 +42,7 @@ app.post("/send", async (req: Request, res: Response) => {
   try {
     let expoTokens: string[] = [];
 
+    // ✅ Prioridade para tokens específicos
     if (Array.isArray(tokens)) {
       expoTokens = tokens.filter(
         (t) => typeof t === "string" && t.startsWith("ExponentPushToken[")
@@ -49,7 +50,7 @@ app.post("/send", async (req: Request, res: Response) => {
     } else if (typeof to === "string" && to.startsWith("ExponentPushToken[")) {
       expoTokens = [to];
     } else {
-      // Buscar todos os tokens válidos da coleção 'usuarios'
+      // 🔍 Buscar todos tokens da coleção 'usuarios'
       const snapshot = await admin.firestore().collection("usuarios").get();
       expoTokens = snapshot.docs
         .map((doc) => doc.data().expoPushToken)
@@ -57,9 +58,11 @@ app.post("/send", async (req: Request, res: Response) => {
     }
 
     if (expoTokens.length === 0) {
-      return res.status(200).json({ success: true, message: "Nenhum token válido encontrado." });
+      console.warn("⚠️ Nenhum token válido encontrado.");
+      return res.status(200).json({ success: true, sent: 0, message: "Nenhum token válido encontrado." });
     }
 
+    // ✉️ Monta as mensagens
     const messages = expoTokens.map((token) => ({
       to: token,
       sound: "default",
@@ -68,6 +71,7 @@ app.post("/send", async (req: Request, res: Response) => {
       ...(image ? { image } : {}),
     }));
 
+    // Envia para a Expo Push API
     const expoResponse = await fetch("https://exp.host/--/api/v2/push/send", {
       method: "POST",
       headers: {
@@ -79,7 +83,7 @@ app.post("/send", async (req: Request, res: Response) => {
     });
 
     const result = await expoResponse.json();
-    console.log("📨 Expo Push Response:", result);
+    console.log("📨 Notificações enviadas:", result);
 
     res.json({ success: true, sent: expoTokens.length, expoResult: result });
   } catch (error) {
@@ -88,7 +92,7 @@ app.post("/send", async (req: Request, res: Response) => {
   }
 });
 
-// Porta dinâmica para Render
+// Porta dinâmica (Render)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 API rodando na porta ${PORT}`);
