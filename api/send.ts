@@ -111,6 +111,11 @@ app.get("/versiculo-hora", async (_req, res) => {
   }
 });
 
+import { checarEEnviarVersiculo } from "./versiculoCron";
+
+// Executa a checagem a cada minuto
+setInterval(checarEEnviarVersiculo, 60 * 1000);
+
 // 🔥 Porta dinâmica (Render)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
