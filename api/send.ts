@@ -1,16 +1,15 @@
 import express, { Request, Response } from "express";
 import admin from "firebase-admin";
 import bodyParser from "body-parser";
-import { QueryDocumentSnapshot } from "firebase-admin/firestore";
 import dotenv from "dotenv";
-import fetch from "node-fetch"; // ✅ necessário para chamadas HTTP
+import fetch from "node-fetch";
 
 dotenv.config();
 
 const app = express();
 app.use(bodyParser.json());
 
-// Firebase Admin setup (mantém para acessar Firestore)
+// Firebase Admin setup
 const jsonString = process.env.GOOGLE_CREDENTIALS;
 if (!jsonString) {
   console.error("❌ GOOGLE_CREDENTIALS não definida.");
@@ -32,7 +31,7 @@ if (!admin.apps.length) {
   console.log("✅ Firebase Admin inicializado.");
 }
 
-// ✅ NOVA ROTA usando Expo Push API
+// ROTA /send para notificação personalizada
 app.post("/send", async (req: Request, res: Response) => {
   const { title, body, image, to, tokens } = req.body;
 
@@ -43,7 +42,6 @@ app.post("/send", async (req: Request, res: Response) => {
   try {
     let expoTokens: string[] = [];
 
-    // Prioridade para tokens enviados no corpo
     if (Array.isArray(tokens)) {
       expoTokens = tokens.filter(
         (t) => typeof t === "string" && t.startsWith("ExponentPushToken[")
@@ -51,11 +49,11 @@ app.post("/send", async (req: Request, res: Response) => {
     } else if (typeof to === "string" && to.startsWith("ExponentPushToken[")) {
       expoTokens = [to];
     } else {
-      // fallback: busca todos os tokens salvos no Firestore
+      // Buscar todos os tokens válidos da coleção 'usuarios'
       const snapshot = await admin.firestore().collection("usuarios").get();
-      const tokens = snapshot.docs
-      .map(doc => doc.data().expoPushToken)
-      .filter(t => typeof t === "string" && t.startsWith("ExponentPushToken["));
+      expoTokens = snapshot.docs
+        .map((doc) => doc.data().expoPushToken)
+        .filter((t) => typeof t === "string" && t.startsWith("ExponentPushToken["));
     }
 
     if (expoTokens.length === 0) {
@@ -81,15 +79,16 @@ app.post("/send", async (req: Request, res: Response) => {
     });
 
     const result = await expoResponse.json();
-    console.log("\uD83D\uDCE8 Expo Push Response:", result);
+    console.log("📨 Expo Push Response:", result);
 
     res.json({ success: true, sent: expoTokens.length, expoResult: result });
   } catch (error) {
-    console.error("\u274C Erro ao enviar notificação:", error);
+    console.error("❌ Erro ao enviar notificação:", error);
     res.status(500).json({ error: "Erro ao enviar notificação." });
   }
 });
-// Porta dinâmica (para Render)
+
+// Porta dinâmica para Render
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 API rodando na porta ${PORT}`);
