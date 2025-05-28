@@ -1,3 +1,6 @@
+//Responsável por iniciar o servidor Express, registrar as rotas de envio de notificações, versículo do dia e agendamento, e executar a verificação automática do horário.
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 import express, { Request, Response } from "express";
 import admin from "firebase-admin";
 import bodyParser from "body-parser";
