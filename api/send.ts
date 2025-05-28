@@ -52,10 +52,10 @@ app.post("/send", async (req: Request, res: Response) => {
       expoTokens = [to];
     } else {
       // fallback: busca todos os tokens salvos no Firestore
-      const snapshot = await admin.firestore().collection("pushTokens").get();
-      expoTokens = snapshot.docs
-        .map((doc: QueryDocumentSnapshot) => doc.data().token)
-        .filter((t) => typeof t === "string" && t.startsWith("ExponentPushToken["));
+      const snapshot = await admin.firestore().collection("usuarios").get();
+      const tokens = snapshot.docs
+      .map(doc => doc.data().expoPushToken)
+      .filter(t => typeof t === "string" && t.startsWith("ExponentPushToken["));
     }
 
     if (expoTokens.length === 0) {
