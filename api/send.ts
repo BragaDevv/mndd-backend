@@ -3,7 +3,8 @@ import admin from "firebase-admin";
 import bodyParser from "body-parser";
 import dotenv from "dotenv";
 import fetch from "node-fetch";
-import versiculoHoraHandler from "./versiculoHora"; //
+import versiculoHoraHandler from "./versiculoHora";
+import versiculoHandler from "./versiculo";
 
 dotenv.config();
 
@@ -32,7 +33,7 @@ if (!admin.apps.length) {
   console.log("✅ Firebase Admin inicializado.");
 }
 
-// ROTA /send para envio de notificações
+// ✅ ROTA /send para envio de notificações personalizadas
 app.post("/send", async (req: Request, res: Response) => {
   const { title, body, image, to, tokens } = req.body;
 
@@ -43,7 +44,7 @@ app.post("/send", async (req: Request, res: Response) => {
   try {
     let expoTokens: string[] = [];
 
-    // ✅ Prioridade para tokens específicos
+    // Prioridade para tokens passados no corpo da requisição
     if (Array.isArray(tokens)) {
       expoTokens = tokens.filter(
         (t) => typeof t === "string" && t.startsWith("ExponentPushToken[")
@@ -54,9 +55,8 @@ app.post("/send", async (req: Request, res: Response) => {
       // 🔍 Buscar todos tokens da coleção 'usuarios'
       const snapshot = await admin.firestore().collection("usuarios").get();
       expoTokens = snapshot.docs
-      .map((doc) => doc.data().expoToken)
-      .filter((t) => typeof t === "string" && t.startsWith("ExponentPushToken["));
-
+        .map((doc) => doc.data().expoToken)
+        .filter((t) => typeof t === "string" && t.startsWith("ExponentPushToken["));
     }
 
     if (expoTokens.length === 0) {
@@ -64,7 +64,6 @@ app.post("/send", async (req: Request, res: Response) => {
       return res.status(200).json({ success: true, sent: 0, message: "Nenhum token válido encontrado." });
     }
 
-    // ✉️ Monta as mensagens
     const messages = expoTokens.map((token) => ({
       to: token,
       sound: "default",
@@ -73,7 +72,6 @@ app.post("/send", async (req: Request, res: Response) => {
       ...(image ? { image } : {}),
     }));
 
-    // Envia para a Expo Push API
     const expoResponse = await fetch("https://exp.host/--/api/v2/push/send", {
       method: "POST",
       headers: {
@@ -94,10 +92,26 @@ app.post("/send", async (req: Request, res: Response) => {
   }
 });
 
-// ✅ Registra a rota do horário do versículo
-app.all("/versiculo-hora", versiculoHoraHandler);
+// ✅ ROTA /versiculo (versículo do dia)
+app.post("/versiculo", versiculoHandler);
 
-// Porta dinâmica (Render)
+// ✅ ROTA /versiculo-hora (POST e GET)
+app.all("/versiculo-hora", versiculoHoraHandler);
+app.get("/versiculo-hora", async (_req, res) => {
+  try {
+    const doc = await admin.firestore().collection("configuracoes").doc("versiculo").get();
+    const data = doc.data();
+    if (data?.hora) {
+      return res.status(200).json({ hora: data.hora });
+    } else {
+      return res.status(404).json({ error: "Horário não encontrado" });
+    }
+  } catch (error) {
+    return res.status(500).json({ error: "Erro ao buscar horário" });
+  }
+});
+
+// 🔥 Porta dinâmica (Render)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 API rodando na porta ${PORT}`);
