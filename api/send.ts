@@ -3,15 +3,17 @@ import admin from "firebase-admin";
 import bodyParser from "body-parser";
 import dotenv from "dotenv";
 import fetch from "node-fetch";
+
 import versiculoHoraHandler from "./versiculoHora";
 import versiculoHandler from "./versiculo";
+import { checarEnviarVersiculo } from "./versiculoCron"; // ✅ Apenas 1 import
 
 dotenv.config();
 
 const app = express();
 app.use(bodyParser.json());
 
-// Inicialização do Firebase Admin
+// 🔐 Inicialização do Firebase Admin
 const jsonString = process.env.GOOGLE_CREDENTIALS;
 if (!jsonString) {
   console.error("❌ GOOGLE_CREDENTIALS não definida.");
@@ -33,7 +35,7 @@ if (!admin.apps.length) {
   console.log("✅ Firebase Admin inicializado.");
 }
 
-// ✅ ROTA /send para envio de notificações personalizadas
+// ✅ ROTA /send - Envia notificação personalizada
 app.post("/send", async (req: Request, res: Response) => {
   const { title, body, image, to, tokens } = req.body;
 
@@ -44,7 +46,6 @@ app.post("/send", async (req: Request, res: Response) => {
   try {
     let expoTokens: string[] = [];
 
-    // Prioridade para tokens passados no corpo da requisição
     if (Array.isArray(tokens)) {
       expoTokens = tokens.filter(
         (t) => typeof t === "string" && t.startsWith("ExponentPushToken[")
@@ -52,7 +53,6 @@ app.post("/send", async (req: Request, res: Response) => {
     } else if (typeof to === "string" && to.startsWith("ExponentPushToken[")) {
       expoTokens = [to];
     } else {
-      // 🔍 Buscar todos tokens da coleção 'usuarios'
       const snapshot = await admin.firestore().collection("usuarios").get();
       expoTokens = snapshot.docs
         .map((doc) => doc.data().expoToken)
@@ -61,7 +61,7 @@ app.post("/send", async (req: Request, res: Response) => {
 
     if (expoTokens.length === 0) {
       console.warn("⚠️ Nenhum token válido encontrado.");
-      return res.status(200).json({ success: true, sent: 0, message: "Nenhum token válido encontrado." });
+      return res.status(200).json({ success: true, sent: 0 });
     }
 
     const messages = expoTokens.map((token) => ({
@@ -92,11 +92,13 @@ app.post("/send", async (req: Request, res: Response) => {
   }
 });
 
-// ✅ ROTA /versiculo (versículo do dia)
+// ✅ Versículo do Dia - manual
 app.post("/versiculo", versiculoHandler);
 
-// ✅ ROTA /versiculo-hora (POST e GET)
+// ✅ Salvar horário do versículo (POST e GET)
 app.all("/versiculo-hora", versiculoHoraHandler);
+
+// ✅ Apenas GET (para segurança e fallback)
 app.get("/versiculo-hora", async (_req, res) => {
   try {
     const doc = await admin.firestore().collection("configuracoes").doc("versiculo").get();
@@ -111,12 +113,16 @@ app.get("/versiculo-hora", async (_req, res) => {
   }
 });
 
-import { checarEEnviarVersiculo } from "./versiculoCron";
+// ✅ ROTA auxiliar para forçar a checagem externa (usada pelo cron-job.org)
+app.get("/checar", async (_req, res) => {
+  await checarEnviarVersiculo();
+  res.send("Versículo checado.");
+});
 
-// Executa a checagem a cada minuto
-setInterval(checarEEnviarVersiculo, 60 * 1000);
+// ❌ REMOVIDO: setInterval(checarEEnviarVersiculo...) aqui! ⚠️
+// Isso não deve rodar constantemente em Render. Use apenas a rota /checar.
 
-// 🔥 Porta dinâmica (Render)
+// 🚀 Inicializa o servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 API rodando na porta ${PORT}`);
