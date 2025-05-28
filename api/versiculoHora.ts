@@ -1,3 +1,6 @@
+//Salva e retorna o horário configurado para envio automático do versículo do dia na coleção configuracoes.//
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 import { Request, Response } from "express";
 import admin from "firebase-admin";
 
