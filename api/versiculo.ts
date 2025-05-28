@@ -1,3 +1,6 @@
+//Envia o versículo do dia via push notification para todos os usuários que possuem token válido na coleção usuarios.//
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 import { Request, Response } from "express";
 import admin from "firebase-admin";
 import fetch from "node-fetch";
