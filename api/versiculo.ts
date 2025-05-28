@@ -12,10 +12,11 @@ export default async function handler(req: Request, res: Response) {
     const dia = new Date().getDate();
     const versiculo = versiculos[dia % versiculos.length];
 
-    const snapshot = await admin.firestore().collection("pushTokens").get();
-    const tokens = snapshot.docs
-      .map((doc) => doc.data().token)
-      .filter((t) => typeof t === "string" && t.startsWith("ExponentPushToken["));
+   const snapshot = await admin.firestore().collection("usuarios").get();
+   const tokens = snapshot.docs
+   .map((doc) => doc.data().expoToken) // ou .expoPushToken, conforme usado no seu projeto
+   .filter((t) => typeof t === "string" && t.startsWith("ExponentPushToken["));
+
 
     if (tokens.length === 0) {
       return res.status(200).json({ success: true, message: "Nenhum token válido encontrado." });
