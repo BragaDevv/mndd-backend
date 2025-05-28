@@ -1,23 +1,27 @@
 import admin from "firebase-admin";
 import fetch from "node-fetch";
 
-// Evita execução múltipla por minuto
+// Garante que o versículo não seja enviado múltiplas vezes no mesmo minuto
 let ultimaExecucao: string | null = null;
 
-export async function checarEEnviarVersiculo() {
+export async function checarEnviarVersiculo() {
   try {
+    // Busca o horário salvo no Firestore
     const doc = await admin.firestore().collection("configuracoes").doc("versiculo").get();
-    const horaSalva = doc.data()?.hora;
+    const horaSalva = doc.data()?.hora; // formato: "HH:mm"
 
-    if (!horaSalva) return;
+    if (!horaSalva) {
+      console.log("⚠️ Nenhum horário salvo para envio de versículo.");
+      return;
+    }
 
     const agora = new Date();
-    const horaAtual = agora.toTimeString().slice(0, 5); // Ex: "14:30"
+    const horaAtual = agora.toTimeString().slice(0, 5); // "HH:mm"
 
+    // Verifica se é o horário programado e se ainda não executou neste minuto
     if (horaAtual === horaSalva && ultimaExecucao !== horaAtual) {
-      console.log("⏰ Hora correspondente! Enviando versículo...");
+      console.log(`⏰ Hora correspondente (${horaAtual})! Enviando versículo...`);
 
-      // Envia para a própria rota
       const res = await fetch("https://mndd-backend.onrender.com/versiculo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -27,7 +31,10 @@ export async function checarEEnviarVersiculo() {
       console.log("✅ Versículo enviado via cron:", data);
 
       ultimaExecucao = horaAtual;
+    } else {
+      console.log(`🕓 Agora: ${horaAtual} | Esperado: ${horaSalva}`);
     }
+
   } catch (err) {
     console.error("❌ Erro no cronômetro do versículo:", err);
   }
