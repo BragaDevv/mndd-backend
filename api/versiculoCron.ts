@@ -1,3 +1,6 @@
+/// Verifica a cada minuto se o horário atual corresponde ao agendado e, se sim, dispara o envio do versículo do dia.////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 import admin from "firebase-admin";
 import fetch from "node-fetch";
 
@@ -16,7 +19,8 @@ export async function checarEnviarVersiculo() {
     }
 
     const agora = new Date();
-    const horaAtual = agora.toTimeString().slice(0, 5); // "HH:mm"
+    agora.setHours(agora.getHours() - 3); // Compensa UTC-3
+    const horaAtual = agora.toTimeString().slice(0, 5); // Ex: "23:15"
 
     // Verifica se é o horário programado e se ainda não executou neste minuto
     if (horaAtual === horaSalva && ultimaExecucao !== horaAtual) {
@@ -32,7 +36,7 @@ export async function checarEnviarVersiculo() {
 
       ultimaExecucao = horaAtual;
     } else {
-      console.log(`🕓 Agora: ${horaAtual} | Esperado: ${horaSalva}`);
+       console.log(`🕓 Agora (ajustada): ${horaAtual} | Esperado: ${horaSalva}`);
     }
 
   } catch (err) {
