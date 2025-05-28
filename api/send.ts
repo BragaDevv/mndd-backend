@@ -53,8 +53,9 @@ app.post("/send", async (req: Request, res: Response) => {
       // 🔍 Buscar todos tokens da coleção 'usuarios'
       const snapshot = await admin.firestore().collection("usuarios").get();
       expoTokens = snapshot.docs
-        .map((doc) => doc.data().expoPushToken)
-        .filter((t) => typeof t === "string" && t.startsWith("ExponentPushToken["));
+      .map((doc) => doc.data().expoToken)
+      .filter((t) => typeof t === "string" && t.startsWith("ExponentPushToken["));
+
     }
 
     if (expoTokens.length === 0) {
