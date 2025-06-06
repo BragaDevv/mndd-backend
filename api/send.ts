@@ -122,8 +122,10 @@ app.get("/checar", async (_req, res) => {
   res.send("Versículo checado.");
 });
 
-// ❌ REMOVIDO: setInterval(checarEEnviarVersiculo...) aqui! ⚠️
-// Isso não deve rodar constantemente em Render. Use apenas a rota /checar.
+// ROTA RSS
+import rssRoute from "./api/rss"; // ✅ import
+app.use("/api", rssRoute); // ✅ ativa rota: /api/rss
+
 
 // 🚀 Inicializa o servidor
 const PORT = process.env.PORT || 3000;
