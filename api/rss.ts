@@ -1,25 +1,25 @@
-import express = require("express");
-const Parser = require("rss-parser");
+import express, { Request, Response } from "express";
+import Parser from "rss-parser";
 
 const router = express.Router();
 const parser = new Parser();
 
-router.get("/rss", async (_req, res) => {
+router.get("/", async (_req: Request, res: Response) => {
   try {
-    const feed = await parser.parseURL("https://pao-diario-devocional.webnode.page/rss/all.xml");
+    const feed = await parser.parseURL("https://www.devocionaisdiarios.com.br/feed");
 
-    const devocionais = feed.items.slice(0, 10).map((item: any) => ({
+    const devocionais = feed.items.slice(0, 5).map((item) => ({
       titulo: item.title,
-      descricao: item.contentSnippet,
       link: item.link,
       data: item.pubDate,
+      resumo: item.contentSnippet,
     }));
 
-    res.status(200).json(devocionais);
+    res.json({ devocionais });
   } catch (error) {
-    console.error("❌ Erro ao buscar RSS:", error);
-    res.status(500).json({ error: "Erro ao buscar RSS" });
+    console.error("Erro ao buscar RSS:", error);
+    res.status(500).json({ erro: "Falha ao buscar devocionais." });
   }
 });
 
-module.exports = router;
+export default router;
