@@ -1,5 +1,5 @@
-import express from "express";
-import Parser from "rss-parser";
+import express = require("express");
+const Parser = require("rss-parser");
 
 const router = express.Router();
 const parser = new Parser();
@@ -15,11 +15,11 @@ router.get("/rss", async (_req, res) => {
       data: item.pubDate,
     }));
 
-    res.json(devocionais);
+    res.status(200).json(devocionais);
   } catch (error) {
-    console.error("Erro ao buscar RSS:", error);
+    console.error("❌ Erro ao buscar RSS:", error);
     res.status(500).json({ error: "Erro ao buscar RSS" });
   }
 });
 
-export default router;
+module.exports = router;
