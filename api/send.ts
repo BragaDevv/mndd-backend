@@ -10,6 +10,7 @@ import fetch from "node-fetch";
 import versiculoHoraHandler from "./versiculoHora";
 import versiculoHandler from "./versiculo";
 import { checarEnviarVersiculo } from "./versiculoCron"; // ✅ Apenas 1 import
+import { versiculoDiaHandler } from "./versiculoDia";
 
 dotenv.config();
 
@@ -122,6 +123,8 @@ app.get("/checar", async (_req, res) => {
   res.send("Versículo checado.");
 });
 
+//ROTA GET VERSICULO DO DIA
+app.get("/api/versiculo-dia", versiculoDiaHandler);
 
 // 🚀 Inicializa o servidor
 const PORT = process.env.PORT || 3000;
