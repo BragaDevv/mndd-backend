@@ -124,7 +124,8 @@ app.get("/checar", async (_req, res) => {
 });
 
 // ROTA RSS
-app.use("/api", rssRoute); // ✅ ativa rota: /api/rss
+app.use("/rss", rssRouter); // ✅ ativa rota: /api/rss
+
 
 
 // 🚀 Inicializa o servidor
