@@ -10,6 +10,7 @@ import fetch from "node-fetch";
 import versiculoHoraHandler from "./versiculoHora";
 import versiculoHandler from "./versiculo";
 import { checarEnviarVersiculo } from "./versiculoCron"; // ✅ Apenas 1 import
+import rssRoute from "./api/rss"; // ✅ import
 
 dotenv.config();
 
@@ -123,7 +124,6 @@ app.get("/checar", async (_req, res) => {
 });
 
 // ROTA RSS
-import rssRoute from "./api/rss"; // ✅ import
 app.use("/api", rssRoute); // ✅ ativa rota: /api/rss
 
 
