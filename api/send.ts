@@ -10,7 +10,7 @@ import fetch from "node-fetch";
 import versiculoHoraHandler from "./versiculoHora";
 import versiculoHandler from "./versiculo";
 import { checarEnviarVersiculo } from "./versiculoCron"; // ✅ Apenas 1 import
-import rssRouter from "./api/rss";
+import rssRouter from "./rss";
 
 dotenv.config();
 
