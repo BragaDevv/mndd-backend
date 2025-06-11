@@ -6,7 +6,8 @@ import admin from "firebase-admin";
 import bodyParser from "body-parser";
 import dotenv from "dotenv";
 import fetch from "node-fetch";
-import { Configuration, OpenAIApi } from "openai";
+import OpenAI from "openai";
+
 
 import versiculoHoraHandler from "./versiculoHora";
 import versiculoHandler from "./versiculo";
@@ -128,10 +129,9 @@ app.get("/checar", async (_req, res) => {
 app.get("/api/versiculo-dia", versiculoDiaHandler);
 
 // ✅ ROTA para integração com OpenAI protegida por backend
-const configuration = new Configuration({
+const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-const openai = new OpenAIApi(configuration);
 
 app.post("/api/openai/ask", async (req: Request, res: Response) => {
   const { prompt } = req.body;
