@@ -6,6 +6,7 @@ import admin from "firebase-admin";
 import bodyParser from "body-parser";
 import dotenv from "dotenv";
 import fetch from "node-fetch";
+import { Configuration, OpenAIApi } from "openai";
 
 import versiculoHoraHandler from "./versiculoHora";
 import versiculoHandler from "./versiculo";
@@ -123,8 +124,31 @@ app.get("/checar", async (_req, res) => {
   res.send("Versículo checado.");
 });
 
-//ROTA GET VERSICULO DO DIA
+// ✅ ROTA GET VERSICULO DO DIA
 app.get("/api/versiculo-dia", versiculoDiaHandler);
+
+// ✅ ROTA para integração com OpenAI protegida por backend
+const configuration = new Configuration({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+const openai = new OpenAIApi(configuration);
+
+app.post("/api/openai/ask", async (req: Request, res: Response) => {
+  const { prompt } = req.body;
+  if (!prompt) return res.status(400).json({ error: "Prompt obrigatório." });
+
+  try {
+    const response = await openai.createChatCompletion({
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    res.json({ reply: response.data.choices[0].message?.content });
+  } catch (error) {
+    console.error("Erro na OpenAI:", error);
+    res.status(500).json({ error: "Erro ao processar resposta." });
+  }
+});
 
 // 🚀 Inicializa o servidor
 const PORT = process.env.PORT || 3000;
