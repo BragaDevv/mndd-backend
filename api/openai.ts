@@ -10,10 +10,16 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Log de inicialização da rota
+console.log("✅ Rota /ask da OpenAI configurada.");
+
 router.post("/ask", async (req: Request, res: Response) => {
   const { prompt } = req.body;
 
+  console.log("📩 Requisição recebida na /ask com prompt:", prompt);
+
   if (!prompt) {
+    console.warn("⚠️ Prompt não fornecido.");
     return res.status(400).json({ error: "Prompt não fornecido." });
   }
 
@@ -40,9 +46,12 @@ router.post("/ask", async (req: Request, res: Response) => {
     });
 
     const result = completion.choices[0]?.message?.content;
+
+    console.log("✅ Resposta gerada pela OpenAI:", result);
+
     return res.status(200).json({ result });
   } catch (error: any) {
-    console.error("Erro ao consultar OpenAI:", error);
+    console.error("❌ Erro ao consultar OpenAI:", error?.message || error);
     return res.status(500).json({ error: "Erro ao consultar OpenAI." });
   }
 });
