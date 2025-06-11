@@ -1,6 +1,3 @@
-//Responsável por iniciar o servidor Express, registrar as rotas de envio de notificações, versículo do dia e agendamento, e executar a verificação automática do horário.
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 import express, { Request, Response } from "express";
 import admin from "firebase-admin";
 import bodyParser from "body-parser";
@@ -8,10 +5,9 @@ import dotenv from "dotenv";
 import fetch from "node-fetch";
 import OpenAI from "openai";
 
-
 import versiculoHoraHandler from "./versiculoHora";
 import versiculoHandler from "./versiculo";
-import { checarEnviarVersiculo } from "./versiculoCron"; // ✅ Apenas 1 import
+import { checarEnviarVersiculo } from "./versiculoCron";
 import { versiculoDiaHandler } from "./versiculoDia";
 
 dotenv.config();
@@ -91,10 +87,10 @@ app.post("/send", async (req: Request, res: Response) => {
     const result = await expoResponse.json();
     console.log("📨 Notificações enviadas:", result);
 
-    res.json({ success: true, sent: expoTokens.length, expoResult: result });
+    return res.json({ success: true, sent: expoTokens.length, expoResult: result });
   } catch (error) {
     console.error("❌ Erro ao enviar notificação:", error);
-    res.status(500).json({ error: "Erro ao enviar notificação." });
+    return res.status(500).json({ error: "Erro ao enviar notificação." });
   }
 });
 
@@ -119,34 +115,54 @@ app.get("/versiculo-hora", async (_req, res) => {
   }
 });
 
-// ✅ ROTA auxiliar para forçar a checagem externa (usada pelo cron-job.org)
+// ✅ ROTA auxiliar para forçar a checagem externa
 app.get("/checar", async (_req, res) => {
   await checarEnviarVersiculo();
-  res.send("Versículo checado.");
+  return res.send("Versículo checado.");
 });
 
 // ✅ ROTA GET VERSICULO DO DIA
 app.get("/api/versiculo-dia", versiculoDiaHandler);
 
-// ✅ ROTA para integração com OpenAI protegida por backend
+// ✅ Integração com OpenAI protegida
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY || "",
 });
 
 app.post("/api/openai/ask", async (req: Request, res: Response) => {
   const { prompt } = req.body;
-  if (!prompt) return res.status(400).json({ error: "Prompt obrigatório." });
+
+  if (!prompt) {
+    return res.status(400).json({ error: "Prompt obrigatório." });
+  }
 
   try {
-    const response = await openai.createChatCompletion({
+    const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
-      messages: [{ role: "user", content: prompt }],
+      messages: [
+        {
+          role: "system",
+          content:
+            "Você é um assistente bíblico cristão do Ministério Nascido de Deus (MNDD). " +
+            "Responda de forma clara, simples e acolhedora, citando versículos quando apropriado. " +
+            "Mantenha-se estritamente no contexto bíblico. " +
+            "Se perguntarem sobre cultos ou eventos da igreja, informe que pode verificar os próximos eventos. " +
+            "Para informações sobre cultos, diga apenas: 'Por favor, pergunte especificamente sobre os cultos para que eu possa verificar.'",
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      temperature: 0.7,
+      max_tokens: 500,
     });
 
-    res.json({ reply: response.data.choices[0].message?.content });
+    const result = completion.choices[0]?.message?.content;
+    return res.status(200).json({ result });
   } catch (error) {
-    console.error("Erro na OpenAI:", error);
-    res.status(500).json({ error: "Erro ao processar resposta." });
+    console.error("Erro ao consultar OpenAI:", error);
+    return res.status(500).json({ error: "Erro ao consultar OpenAI." });
   }
 });
 
