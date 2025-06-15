@@ -9,6 +9,7 @@ import versiculoHoraHandler from "./versiculoHora";
 import versiculoHandler from "./versiculo";
 import { checarEnviarVersiculo } from "./versiculoCron";
 import { versiculoDiaHandler } from "./versiculoDia";
+import spotifyHandler from "./spotify";
 
 dotenv.config();
 
@@ -114,6 +115,9 @@ app.get("/versiculo-hora", async (_req, res) => {
     return res.status(500).json({ error: "Erro ao buscar horário" });
   }
 });
+
+// ✅ ROTA Spotify
+app.get("/spotify/louvores", spotifyHandler);
 
 // ✅ ROTA auxiliar para forçar a checagem externa
 app.get("/checar", async (_req, res) => {
