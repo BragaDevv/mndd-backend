@@ -6,7 +6,8 @@ import fetch from "node-fetch";
 export default async function cultosAvisoHandler(_req: Request, res: Response) {
   console.log("🔔 Verificando cultos para avisar...");
 
-  const agora = new Date(new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }));
+  const agora = new Date();
+  agora.setHours(agora.getHours() - 3); // UTC-3
   console.log("🕓 Agora (ajustada):", agora.toLocaleString("pt-BR"));
 
   try {
@@ -37,12 +38,12 @@ export default async function cultosAvisoHandler(_req: Request, res: Response) {
       }
 
       const dataCulto = new Date(ano, mes - 1, dia, hora, minuto);
-      const diff = (dataCulto.getTime() - agora.getTime()) / 60000;
-
-      if (isNaN(diff)) {
-        console.log("🚨 Erro ao calcular diferença. Data interpretada:", dataCulto.toISOString());
+      if (isNaN(dataCulto.getTime())) {
+        console.log("🚨 Erro ao interpretar data. Data bruta:", `${dia}/${mes}/${ano} ${hora}:${minuto}`);
         continue;
       }
+
+      const diff = (dataCulto.getTime() - agora.getTime()) / 60000;
 
       console.log(`📆 Culto: ${culto.tipo} às ${culto.horario} em ${culto.data}`);
       console.log(`📅 Interpretação: ${dataCulto.toLocaleString("pt-BR")} | Diferença: ${diff.toFixed(2)} minutos`);
@@ -63,8 +64,8 @@ export default async function cultosAvisoHandler(_req: Request, res: Response) {
         const messages = tokens.map((token) => ({
           to: token,
           sound: "default",
-          title: "🔔 Hoje tem Culto !",
-          body: `⛪${culto.tipo || "Culto"} hoje, 📍 ${culto.local || "igreja"}`,
+          title: "⛪ Culto em breve!",
+          body: `O culto \"${culto.tipo.trim()}\" começa às ${culto.horario}. Prepare-se para participar!`,
         }));
 
         const response = await fetch("https://exp.host/--/api/v2/push/send", {
