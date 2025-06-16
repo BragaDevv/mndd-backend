@@ -46,8 +46,8 @@ export default async function cultosAvisoHandler(req: Request, res: Response) {
       const messages = tokens.map((token) => ({
         to: token,
         sound: "default",
-        title: `⛪ Culto às ${culto.horario}`,
-        body: `${culto.tipo || "Culto"} começa em 2h no local: ${culto.local || "igreja"}`,
+        title: `🔔 Culto às ${culto.horario}`,
+        body: `⛪${culto.tipo || "Culto"} hoje, 📍 ${culto.local || "igreja"}`,
       }));
 
       console.log(`📨 Enviando aviso do culto: ${culto.tipo} às ${culto.horario}`);
