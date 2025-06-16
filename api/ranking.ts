@@ -8,7 +8,7 @@ export default async function rankingHandler(req: Request, res: Response) {
     const snapshot = await admin.firestore().collection("ranking").get();
 
     const rankingOrdenado = snapshot.docs
-      .map((doc) => ({ id: doc.id, ...doc.data() }))
+      .map((doc) => ({ id: doc.id, ...(doc.data() as { nome?: string; pontuacao: number }) }))
       .sort((a: any, b: any) => b.pontuacao - a.pontuacao);
 
     if (rankingOrdenado.length === 0) {
