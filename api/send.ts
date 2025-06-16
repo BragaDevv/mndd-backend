@@ -10,6 +10,7 @@ import versiculoHandler from "./versiculo";
 import { checarEnviarVersiculo } from "./versiculoCron";
 import { versiculoDiaHandler } from "./versiculoDia";
 import spotifyHandler from "./spotify";
+import rankingHandler from "./ranking";
 
 dotenv.config();
 
@@ -118,6 +119,9 @@ app.get("/versiculo-hora", async (_req, res) => {
 
 // ✅ ROTA Spotify
 app.get("/spotify/louvores", spotifyHandler);
+
+// ✅ ROTA Ranking
+app.get("/ranking/check", rankingHandler);
 
 // ✅ ROTA auxiliar para forçar a checagem externa
 app.get("/checar", async (_req, res) => {
