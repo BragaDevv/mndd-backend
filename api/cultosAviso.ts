@@ -5,7 +5,7 @@ import fetch from "node-fetch";
 function parseDataHora(dataStr: string, horaStr: string): Date {
   const [dia, mes, ano] = dataStr.split("/").map(Number);
   const [hora, minuto] = horaStr.split(":").map(Number);
-  return new Date(ano, mes - 1, dia, hora, minuto);
+  return new Date(`${ano}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}T${horaStr}:00`);
 }
 
 export default async function cultosAvisoHandler(req: Request, res: Response) {
@@ -72,4 +72,6 @@ export default async function cultosAvisoHandler(req: Request, res: Response) {
     console.error("❌ Erro ao avisar sobre cultos:", error);
     return res.status(500).json({ error: "Erro ao enviar notificações." });
   }
+
+  
 }
