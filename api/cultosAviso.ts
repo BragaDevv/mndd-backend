@@ -22,7 +22,6 @@ export default async function cultosAvisoHandler(_req: Request, res: Response) {
     const cultos = snapshot.docs.map((doc) => doc.data());
 
     for (const culto of cultos) {
-      console.log("📦 Dados brutos do culto:", culto);
 
       if (!culto.data || !culto.horario) {
         console.log("⚠️ Culto ignorado: dados incompletos.");
@@ -64,8 +63,8 @@ export default async function cultosAvisoHandler(_req: Request, res: Response) {
         const messages = tokens.map((token) => ({
           to: token,
           sound: "default",
-          title: "⛪ Culto em breve!",
-          body: `O culto \"${culto.tipo.trim()}\" começa às ${culto.horario}. Prepare-se para participar!`,
+          title: "🔔 Hoje tem Culto !",
+          body: `⛪${culto.tipo || "Culto"} hoje, 📍 ${culto.local || "igreja"}`,
         }));
 
         const response = await fetch("https://exp.host/--/api/v2/push/send", {
