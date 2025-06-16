@@ -3,9 +3,23 @@ import { Request, Response } from "express";
 import admin from "firebase-admin";
 import fetch from "node-fetch";
 
-function parseDataHora(data: string, horario: string): Date {
-  const [dia, mes, ano] = data.split("/").map(Number);
-  const [hora, minuto] = horario.split(":").map(Number);
+function parseDataHora(data: string, horario: string): Date | null {
+  const dataParts = data?.split("/").map(Number);
+  const horaParts = horario?.split(":").map(Number);
+
+  if (
+    !dataParts ||
+    dataParts.length !== 3 ||
+    !horaParts ||
+    horaParts.length !== 2 ||
+    dataParts.some(isNaN) ||
+    horaParts.some(isNaN)
+  ) {
+    return null;
+  }
+
+  const [dia, mes, ano] = dataParts;
+  const [hora, minuto] = horaParts;
   return new Date(ano, mes - 1, dia, hora, minuto);
 }
 
@@ -27,11 +41,9 @@ export default async function cultosAvisoHandler(_req: Request, res: Response) {
         return false;
       }
 
-      let cultoDate: Date;
-      try {
-        cultoDate = parseDataHora(culto.data.trim(), culto.horario.trim());
-      } catch (err) {
-        console.log(`❌ Erro ao interpretar data/horario do culto "${culto.tipo}":`, err);
+      const cultoDate = parseDataHora(culto.data.trim(), culto.horario.trim());
+      if (!cultoDate || isNaN(cultoDate.getTime())) {
+        console.log(`❌ Erro ao interpretar data/horario do culto "${culto.tipo}".`);
         return false;
       }
 
@@ -61,7 +73,6 @@ export default async function cultosAvisoHandler(_req: Request, res: Response) {
       return res.status(200).json({ message: "Nenhum culto dentro do intervalo." });
     }
 
-    // 🔔 Enviar notificação para todos os tokens
     const tokensSnap = await admin.firestore().collection("usuarios").get();
     const tokens = tokensSnap.docs
       .map((doc) => doc.data().expoToken)
