@@ -64,7 +64,7 @@ export default async function cultosAvisoHandler(_req: Request, res: Response) {
           to: token,
           sound: "default",
           title: "🔔 Hoje tem Culto !",
-          body: `⛪${culto.tipo || "Culto"} hoje, 📍 ${culto.local || "igreja"}`,
+          body: `${culto.tipo || "Culto"} hoje | 📍 ${culto.local || "igreja"}`,
         }));
 
         const response = await fetch("https://exp.host/--/api/v2/push/send", {
