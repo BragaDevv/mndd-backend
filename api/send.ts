@@ -11,6 +11,8 @@ import { checarEnviarVersiculo } from "./versiculoCron";
 import { versiculoDiaHandler } from "./versiculoDia";
 import spotifyHandler from "./spotify";
 import rankingHandler from "./ranking";
+import cultosAvisoHandler from "./cultosAviso";
+
 
 dotenv.config();
 
@@ -116,6 +118,9 @@ app.get("/versiculo-hora", async (_req, res) => {
     return res.status(500).json({ error: "Erro ao buscar horário" });
   }
 });
+
+// ✅ ROTA Notif Cultos
+app.get("/cultos/avisar", cultosAvisoHandler);
 
 // ✅ ROTA Spotify
 app.get("/spotify/louvores", spotifyHandler);
