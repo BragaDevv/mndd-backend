@@ -10,9 +10,10 @@ function parseDataHora(dataStr: string, horaStr: string): Date {
 
 export default async function cultosAvisoHandler(req: Request, res: Response) {
   try {
-    console.log("🔔 Verificando cultos para avisar...");
-
     const agora = new Date();
+    console.log("🔔 [AVISO CULTO] Iniciando verificação...");
+    console.log("🕒 Agora:", agora.toLocaleString());
+
     const cultosSnap = await admin.firestore().collection("cultos").get();
 
     const cultosProximos = cultosSnap.docs
@@ -21,10 +22,16 @@ export default async function cultosAvisoHandler(req: Request, res: Response) {
         if (!culto.data || !culto.horario) return false;
 
         const cultoDate = parseDataHora(culto.data, culto.horario);
-        const diffMs = cultoDate.getTime() - agora.getTime();
-        const diffHoras = diffMs / (1000 * 60 * 60);
+        const diffMinutos = (cultoDate.getTime() - agora.getTime()) / 60000;
 
-        return diffHoras > 1.9 && diffHoras <= 2.1; // margem de 12 min
+        console.log(`📆 Culto: ${culto.tipo || "Sem título"} às ${culto.horario} em ${culto.data}`);
+        console.log(`📅 Interpretação: ${cultoDate.toLocaleString()} | Diferença: ${diffMinutos.toFixed(2)} minutos`);
+
+        // Testa se está entre 115 e 125 minutos (2h ± 5min)
+        const dentroDoIntervalo = diffMinutos >= 115 && diffMinutos <= 125;
+        console.log(dentroDoIntervalo ? "✅ Dentro do intervalo de envio!" : "❌ Fora do intervalo.");
+
+        return dentroDoIntervalo;
       });
 
     if (cultosProximos.length === 0) {
@@ -38,7 +45,7 @@ export default async function cultosAvisoHandler(req: Request, res: Response) {
       .filter((t) => typeof t === "string" && t.startsWith("ExponentPushToken["));
 
     if (tokens.length === 0) {
-      console.log("⚠️ Nenhum token válido para envio.");
+      console.log("⚠️ Nenhum token válido encontrado.");
       return res.status(200).json({ message: "Sem tokens válidos." });
     }
 
@@ -46,8 +53,8 @@ export default async function cultosAvisoHandler(req: Request, res: Response) {
       const messages = tokens.map((token) => ({
         to: token,
         sound: "default",
-        title: `🔔 Culto às ${culto.horario}`,
-        body: `⛪${culto.tipo || "Culto"} hoje, 📍 ${culto.local || "igreja"}`,
+        title: `⛪ Culto às ${culto.horario}`,
+        body: `${culto.tipo || "Culto"} começa em 2h no local: ${culto.local || "igreja"}`,
       }));
 
       console.log(`📨 Enviando aviso do culto: ${culto.tipo} às ${culto.horario}`);
@@ -69,9 +76,7 @@ export default async function cultosAvisoHandler(req: Request, res: Response) {
     return res.status(200).json({ message: "Notificações enviadas para cultos em 2h." });
 
   } catch (error) {
-    console.error("❌ Erro ao avisar sobre cultos:", error);
-    return res.status(500).json({ error: "Erro ao enviar notificações." });
+    console.error("❌ Erro ao enviar aviso de cultos:", error);
+    return res.status(500).json({ error: "Erro ao processar notificação de culto." });
   }
-
-  
 }
