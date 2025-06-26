@@ -7,7 +7,7 @@ export default async function cultosAvisoHandler(_req: Request, res: Response) {
   console.log("🔔 Verificando cultos para avisar...");
 
   const agora = new Date();
-  agora.setHours(agora.getHours() - 3); // Ajuste UTC-3
+  agora.setHours(agora.getHours() - 3); // Ajuste para UTC-3
   console.log("🕓 Agora (ajustada):", agora.toLocaleString("pt-BR"));
 
   try {
@@ -22,24 +22,44 @@ export default async function cultosAvisoHandler(_req: Request, res: Response) {
     const cultos = snapshot.docs.map((doc) => doc.data());
 
     for (const culto of cultos) {
-      const dataStr = culto.data?.trim(); // Ex: "2025-06-25"
-      const horaStr = culto.horario?.trim(); // Ex: "20:00"
-
-      if (!dataStr || !horaStr) {
+      if (!culto.data || !culto.horario) {
         console.log("⚠️ Culto ignorado: dados incompletos.");
         continue;
       }
 
-      const dataCompleta = new Date(`${dataStr}T${horaStr}:00-03:00`);
-      if (isNaN(dataCompleta.getTime())) {
-        console.log("🚨 Data inválida:", `${dataStr}T${horaStr}:00-03:00`);
+      // Interpretação da data
+      let ano: number, mes: number, dia: number;
+      if (culto.data.includes("/")) {
+        // Formato DD/MM/AAAA
+        [dia, mes, ano] = culto.data.trim().split("/").map(Number);
+      } else if (culto.data.includes("-")) {
+        // Formato ISO: AAAA-MM-DD
+        [ano, mes, dia] = culto.data.trim().split("-").map(Number);
+      } else {
+        console.log("⚠️ Formato de data desconhecido:", culto.data);
         continue;
       }
 
-      const diff = (dataCompleta.getTime() - agora.getTime()) / 60000;
+      const [hora, minuto] = culto.horario.trim().split(":").map(Number);
 
-      console.log(`📆 Culto: ${culto.tipo || "Sem tipo"} às ${horaStr} em ${dataStr}`);
-      console.log(`📅 Data completa interpretada: ${dataCompleta.toLocaleString("pt-BR")}`);
+      if (
+        isNaN(dia) || isNaN(mes) || isNaN(ano) ||
+        isNaN(hora) || isNaN(minuto)
+      ) {
+        console.log("⚠️ Culto ignorado: data ou horário inválido.");
+        continue;
+      }
+
+      const dataCulto = new Date(ano, mes - 1, dia, hora, minuto);
+      if (isNaN(dataCulto.getTime())) {
+        console.log("🚨 Erro ao interpretar data. Data bruta:", `${dia}/${mes}/${ano} ${hora}:${minuto}`);
+        continue;
+      }
+
+      const diff = (dataCulto.getTime() - agora.getTime()) / 60000;
+
+      console.log(`📆 Culto: ${culto.tipo} às ${culto.horario} em ${culto.data}`);
+      console.log(`🗓️ Data completa interpretada: ${dataCulto.toLocaleString("pt-BR")}`);
       console.log(`⏱️ Diferença em minutos: ${diff.toFixed(2)}`);
 
       if (diff >= 115 && diff <= 125) {
@@ -59,7 +79,7 @@ export default async function cultosAvisoHandler(_req: Request, res: Response) {
           to: token,
           sound: "default",
           title: "🔔 Hoje tem Culto!",
-          body: `${culto.tipo || "Culto"} 📍 ${culto.local || "na igreja"} às ${horaStr}`,
+          body: `${culto.tipo || "Culto"} 📍 ${culto.local || "igreja"}`,
         }));
 
         const response = await fetch("https://exp.host/--/api/v2/push/send", {
@@ -74,7 +94,7 @@ export default async function cultosAvisoHandler(_req: Request, res: Response) {
         const expoResult = await response.json();
         console.log("📨 Notificações enviadas:", expoResult);
       } else {
-        console.log("❌ Culto fora do intervalo de envio.");
+        console.log("❌ Fora do intervalo.");
       }
     }
 
