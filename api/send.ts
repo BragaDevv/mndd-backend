@@ -12,6 +12,8 @@ import { versiculoDiaHandler } from "./versiculoDia";
 import spotifyHandler from "./spotify";
 import rankingHandler from "./ranking";
 import cultosAvisoHandler from "./cultosAviso";
+import cifraHandler from "./cifra";
+
 
 
 dotenv.config();
@@ -124,6 +126,9 @@ app.get("/cultos/avisar", cultosAvisoHandler);
 
 // ✅ ROTA Spotify
 app.get("/spotify/louvores", spotifyHandler);
+
+// ✅ ROTA Cifra
+app.post("/salvar-cifra", cifraHandler);
 
 // ✅ ROTA Ranking
 app.get("/ranking/check", rankingHandler);
