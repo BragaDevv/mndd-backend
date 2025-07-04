@@ -1,17 +1,13 @@
-/// Verifica a cada minuto se o horário atual corresponde ao agendado e, se sim, dispara o envio do versículo do dia.////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 import admin from "firebase-admin";
 import fetch from "node-fetch";
 
-// Garante que o versículo não seja enviado múltiplas vezes no mesmo minuto
-let ultimaExecucao: string | null = null;
+// Armazena o último dia em que foi executado
+let ultimaExecucaoDia: string | null = null;
 
 export async function checarEnviarVersiculo() {
   try {
-    // Busca o horário salvo no Firestore
     const doc = await admin.firestore().collection("configuracoes").doc("versiculo").get();
-    const horaSalva = doc.data()?.hora; // formato: "HH:mm"
+    const horaSalva = doc.data()?.hora; // formato: "08:00"
 
     if (!horaSalva) {
       console.log("⚠️ Nenhum horário salvo para envio de versículo.");
@@ -19,12 +15,22 @@ export async function checarEnviarVersiculo() {
     }
 
     const agora = new Date();
-    agora.setHours(agora.getHours() - 3); // Compensa UTC-3
-    const horaAtual = agora.toTimeString().slice(0, 5); // Ex: "23:15"
+    agora.setHours(agora.getHours() - 3); // Ajuste UTC-3
 
-    // Verifica se é o horário programado e se ainda não executou neste minuto
-    if (horaAtual === horaSalva && ultimaExecucao !== horaAtual) {
-      console.log(`⏰ Hora correspondente (${horaAtual})! Enviando versículo...`);
+    const horaAtual = agora.getHours();
+    const minutoAtual = agora.getMinutes();
+
+    const [horaAgendada, minutoAgendado] = horaSalva.split(":").map(Number);
+
+    const minutosAgora = horaAtual * 60 + minutoAtual;
+    const minutosAgendado = horaAgendada * 60 + minutoAgendado;
+
+    const dataHoje = agora.toISOString().split("T")[0]; // "2025-06-20"
+
+    const dentroDoIntervalo = minutosAgora >= minutosAgendado && minutosAgora < minutosAgendado + 5;
+
+    if (dentroDoIntervalo && ultimaExecucaoDia !== dataHoje) {
+      console.log(`⏰ Dentro do intervalo entre ${horaSalva} e ${horaSalva} + 5min (${horaAtual}:${minutoAtual}). Enviando versículo...`);
 
       const res = await fetch("https://mndd-backend.onrender.com/versiculo", {
         method: "POST",
@@ -34,11 +40,10 @@ export async function checarEnviarVersiculo() {
       const data = await res.json();
       console.log("✅ Versículo enviado via cron:", data);
 
-      ultimaExecucao = horaAtual;
+      ultimaExecucaoDia = dataHoje;
     } else {
-       console.log(`🕓 Agora (ajustada): ${horaAtual} | Esperado: ${horaSalva}`);
+      console.log(`🕓 Agora (ajustada): ${horaAtual}:${minutoAtual.toString().padStart(2, "0")} | Esperado: ${horaSalva}`);
     }
-
   } catch (err) {
     console.error("❌ Erro no cronômetro do versículo:", err);
   }
