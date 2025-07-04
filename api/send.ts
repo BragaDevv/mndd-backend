@@ -128,7 +128,7 @@ app.get("/cultos/avisar", cultosAvisoHandler);
 app.get("/spotify/louvores", spotifyHandler);
 
 // ✅ ROTA Cifra
-app.post("/salvar-cifra", cifraHandler);
+app.all("/cifras", cifraHandler); // cuida de GET e POST (mais flexível)
 
 // ✅ ROTA Ranking
 app.get("/ranking/check", rankingHandler);
