@@ -73,6 +73,31 @@ export default async function cifraHandler(req: Request, res: Response) {
     }
   }
 
+  // ✅ PATCH → Atualizar título da cifra
+  if (req.method === "PATCH") {
+    const { id } = req.query;
+    const { titulo } = req.body;
+
+    if (!id || typeof id !== "string") {
+      return res.status(400).json({ erro: "ID da cifra ausente ou inválido." });
+    }
+
+    if (!titulo || typeof titulo !== "string") {
+      return res.status(400).json({ erro: "Título ausente ou inválido." });
+    }
+
+    try {
+      const docRef = admin.firestore().collection("cifras_salvas").doc(id);
+      await docRef.update({ titulo });
+
+      return res.status(200).json({ sucesso: true });
+    } catch (error) {
+      console.error("Erro ao atualizar título da cifra:", error);
+      return res.status(500).json({ erro: "Erro ao atualizar a cifra." });
+    }
+  }
+
+
   // ⛔ Outros métodos não permitidos
   return res.status(405).send("Método não permitido.");
 }
