@@ -99,6 +99,24 @@ export default async function cifraHandler(req: Request, res: Response) {
     }
   }
 
+  // ✅ DELETE → Remover cifra por ID
+if (req.method === "DELETE") {
+  const { id } = req.query;
+
+  if (!id || typeof id !== "string") {
+    return res.status(400).json({ erro: "ID ausente ou inválido." });
+  }
+
+  try {
+    await admin.firestore().collection("cifras_salvas").doc(id).delete();
+    return res.status(200).json({ sucesso: true });
+  } catch (error) {
+    console.error("Erro ao excluir cifra:", error);
+    return res.status(500).json({ erro: "Erro ao excluir a cifra." });
+  }
+}
+
+
   // ⛔ Outros métodos não permitidos
   return res.status(405).send("Método não permitido.");
 }
