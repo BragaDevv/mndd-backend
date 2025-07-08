@@ -32,7 +32,7 @@ export default async function cifraHandler(req: Request, res: Response) {
     }
   }
 
-  // ✅ POST → Salvar nova cifra
+  // ✅ POST → Salvar nova cifra com numeração global
   if (req.method === "POST") {
     const { url, uid } = req.body;
 
@@ -46,15 +46,19 @@ export default async function cifraHandler(req: Request, res: Response) {
 
       const tituloMeta = $('meta[property="og:title"]').attr("content")?.trim();
       const tituloFallback = $("h1").first().text().trim();
-      const titulo = tituloMeta || tituloFallback;
+      const tituloOriginal = tituloMeta || tituloFallback;
 
       const cifra = $(".cifra_cnt").text().trim();
 
-      if (!titulo || !cifra) {
-        return res
-          .status(400)
-          .json({ erro: "Não foi possível extrair a cifra." });
+      if (!tituloOriginal || !cifra) {
+        return res.status(400).json({ erro: "Não foi possível extrair a cifra." });
       }
+
+      // 🔢 Buscar número global da próxima cifra
+      const snapshot = await admin.firestore().collection("cifras_salvas").get();
+      const numero = snapshot.size + 1;
+      const numeroFormatado = String(numero).padStart(3, "0");
+      const titulo = `${numeroFormatado} - ${tituloOriginal}`;
 
       const docRef = await admin.firestore().collection("cifras_salvas").add({
         uid,
@@ -67,9 +71,7 @@ export default async function cifraHandler(req: Request, res: Response) {
       return res.status(200).json({ sucesso: true, id: docRef.id, titulo });
     } catch (err) {
       console.error("Erro ao salvar cifra:", err);
-      return res
-        .status(500)
-        .json({ erro: "Erro ao extrair ou salvar a cifra." });
+      return res.status(500).json({ erro: "Erro ao extrair ou salvar a cifra." });
     }
   }
 
@@ -96,7 +98,6 @@ export default async function cifraHandler(req: Request, res: Response) {
       return res.status(500).json({ erro: "Erro ao atualizar a cifra." });
     }
   }
-
 
   // ⛔ Outros métodos não permitidos
   return res.status(405).send("Método não permitido.");
