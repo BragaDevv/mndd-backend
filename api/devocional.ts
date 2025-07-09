@@ -1,35 +1,37 @@
+// src/devocional.ts
 import { Request, Response } from "express";
-import fetch from "node-fetch";
-import * as cheerio from "cheerio";
+import Parser from "rss-parser";
+import { JSDOM } from "jsdom";
 
-export async function devocionalHandler(req: Request, res: Response) {
+const parser = new Parser();
+
+export const devocionalHandler = async (req: Request, res: Response) => {
   try {
-    const rssUrl = "https://paodiario.org/feed/";
-    const response = await fetch(rssUrl);
-    const xml = await response.text();
+    const feed = await parser.parseURL("https://api.rbc.org.br/pao-diario/feed/acf");
 
-    const $ = cheerio.load(xml, { xmlMode: true });
+    if (!feed || !feed.items || feed.items.length === 0) {
+      return res.status(404).json({ error: "Devocional não encontrado." });
+    }
 
-    const firstItem = $("item").first();
+    const primeiro = feed.items[0]; // Devocional mais recente
 
-    const titulo = firstItem.find("title").text();
-    const publicado = firstItem.find("pubDate").text();
-    const link = firstItem.find("link").text();
-    const rawDescription = firstItem.find("description").text();
+    const titulo = primeiro.title || "Devocional";
+    const link = primeiro.link || "";
+    const publicado = primeiro.pubDate || "";
 
-    // 🧼 Limpa o conteúdo do <description> (vem com <p>, <br>, etc)
-    const $$ = cheerio.load(rawDescription);
-    const conteudo = $$.text().replace(/\s+/g, " ").trim();
+    let conteudoHTML = primeiro["content:encoded"] || primeiro.content || "";
+    const dom = new JSDOM(conteudoHTML);
+    const texto = dom.window.document.body.textContent || "";
 
-    return res.json({
-      titulo: titulo || "Devocional",
+    return res.status(200).json({
+      titulo,
       publicado,
       link,
-      conteudo,
-      imagem: null, // não tem imagem nesse feed
+      conteudo: texto.trim(),
+      imagem: null,
     });
   } catch (error) {
-    console.error("❌ Erro ao buscar devocional RSS:", error);
+    console.error("Erro ao buscar devocional RSS:", error);
     return res.status(500).json({ error: "Erro ao buscar devocional." });
   }
-}
+};
