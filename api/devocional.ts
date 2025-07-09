@@ -18,6 +18,7 @@ export const devocionalHandler = async (_req: Request, res: Response) => {
     });
 
     const html = await response.text();
+    console.log("📄 HTML recebido:\n", html.substring(0, 1000)); // mostra só os primeiros 1000 caracteres
 
     const $ = cheerio.load(html);
 
@@ -34,6 +35,11 @@ export const devocionalHandler = async (_req: Request, res: Response) => {
 
     if (!conteudo || !titulo) {
       console.warn("⚠️ Conteúdo ou título vazio");
+      console.warn("📛 Dados extraídos:");
+      console.warn("Título:", titulo);
+      console.warn("Parágrafos:", paragrafos.length);
+      console.warn("Conteúdo:", conteudo);
+
       return res.status(404).json({ error: "Devocional não encontrado." });
     }
 
