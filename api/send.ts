@@ -13,6 +13,8 @@ import spotifyHandler from "./spotify";
 import rankingHandler from "./ranking";
 import cultosAvisoHandler from "./cultosAviso";
 import cifraHandler from "./cifra";
+import { devocionalHandler } from "./devocional";
+
 
 dotenv.config();
 
@@ -130,6 +132,9 @@ app.all("/cifras", cifraHandler); // cuida de GET e POST (mais flexível)
 
 // ✅ ROTA Ranking
 app.get("/ranking/check", rankingHandler);
+
+// ✅ ROTA Devocional
+app.get("/devocional", devocionalHandler);
 
 // ✅ ROTA auxiliar para forçar a checagem externa
 app.get("/checar", async (_req, res) => {
