@@ -145,8 +145,19 @@ app.all("/cifras", cifraHandler); // cuida de GET e POST (mais flexível)
 // ✅ ROTA Ranking
 app.get("/ranking/check", rankingHandler);
 
+// ✅ ROTA Devocional IA
+app.get("/api/devocional/criar", async (_req, res) => {
+  try {
+    await salvarDevocionalDiario();
+    res.status(200).send("✅ Devocional salvo no Firestore.");
+  } catch (error) {
+    console.error("❌ Erro ao salvar devocional:", error);
+    res.status(500).send("Erro ao salvar devocional.");
+  }
+});
+
 // DEVOCIONAL // Executa todo dia às 5h da manhã (UTC)
-cron.schedule("0 5 * * *", async () => {
+cron.schedule("0 9 * * *", async () => {
   console.log("⏰ Rodando tarefa de devocional diário");
   await salvarDevocionalDiario();
 });
