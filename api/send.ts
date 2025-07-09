@@ -4,6 +4,7 @@ import bodyParser from "body-parser";
 import dotenv from "dotenv";
 import fetch from "node-fetch";
 import OpenAI from "openai";
+import cron from "node-cron";
 
 import versiculoHoraHandler from "./versiculoHora";
 import versiculoHandler from "./versiculo";
@@ -13,7 +14,7 @@ import spotifyHandler from "./spotify";
 import rankingHandler from "./ranking";
 import cultosAvisoHandler from "./cultosAviso";
 import cifraHandler from "./cifra";
-import { devocionalIaHandler } from "./devocionalOpenAi";
+import { salvarDevocionalDiario } from "./saveDevocionalDiario";
 
 dotenv.config();
 
@@ -144,8 +145,12 @@ app.all("/cifras", cifraHandler); // cuida de GET e POST (mais flexível)
 // ✅ ROTA Ranking
 app.get("/ranking/check", rankingHandler);
 
-// ✅ ROTA Devocional
-app.get("/devocional-ia", devocionalIaHandler);
+// DEVOCIONAL // Executa todo dia às 5h da manhã (UTC)
+cron.schedule("0 5 * * *", async () => {
+  console.log("⏰ Rodando tarefa de devocional diário");
+  await salvarDevocionalDiario();
+});
+
 
 // ✅ ROTA auxiliar para forçar a checagem externa
 app.get("/checar", async (_req, res) => {
