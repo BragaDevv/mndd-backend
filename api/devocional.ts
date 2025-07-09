@@ -1,50 +1,51 @@
 import { Request, Response } from "express";
-import Parser from "rss-parser";
 import fetch from "node-fetch";
 import * as cheerio from "cheerio";
+import { format, subDays } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
-const parser = new Parser();
-const FEED_URL = "https://paodiario.org/feed/";
+async function buscarDevocionalPorData(data: Date) {
+    const dataFormatada = format(data, "dd/MM/yyyy");
+    const url = `https://ministeriospaodiario.com.br/devocional?date=${dataFormatada}`;
 
-export async function devocionalHandler(req: Request, res: Response) {
-  try {
-    const feed = await parser.parseURL(FEED_URL);
+    const res = await fetch(url);
+    const html = await res.text();
+    const $ = cheerio.load(html);
 
-    for (const item of feed.items) {
-      const link = item.link || "";
+    const titulo = $(".title-article").first().text().trim();
+    const conteudo = $(".content-article").first().text().trim();
+    const imagem = $(".image-article img").first().attr("src");
 
-      // Somente devocionais reais (não artigos avulsos)
-      if (!link.includes("paodiario.org/202")) continue;
-
-      const response = await fetch(link);
-      const html = await response.text();
-      const $ = cheerio.load(html);
-
-      const conteudo =
-        $(".entry-content").text().trim() ||
-        $(".td-post-content").text().trim() ||
-        $("article").text().trim();
-
-      const imagem =
-        $(".entry-content img").first().attr("src") ||
-        $(".td-post-content img").first().attr("src") ||
-        $("article img").first().attr("src");
-
-      if (conteudo.length > 100) {
-        return res.json({
-          titulo: item.title,
-          publicado: item.pubDate,
-          conteudo,
-          imagem: imagem || null,
-          link,
-        });
-      }
+    if (titulo && conteudo) {
+        return {
+            titulo,
+            conteudo,
+            imagem: imagem || null,
+            publicado: format(data, "yyyy-MM-dd"),
+            link: url,
+        };
     }
 
-    // Se nenhum devocional válido foi encontrado
-    res.status(404).json({ error: "Nenhum devocional válido encontrado no feed." });
-  } catch (error) {
-    console.error("Erro ao buscar devocional:", error);
-    res.status(500).json({ error: "Erro ao buscar o devocional." });
-  }
+    return null;
+}
+
+export async function devocionalHandler(req: Request, res: Response) {
+    try {
+        const hoje = new Date();
+
+        // tenta o devocional de hoje, se falhar tenta o de ontem
+        const tentativas = [hoje, subDays(hoje, 1), subDays(hoje, 2)];
+
+        for (const data of tentativas) {
+            const devocional = await buscarDevocionalPorData(data);
+            if (devocional) {
+                return res.json(devocional);
+            }
+        }
+
+        res.status(404).json({ error: "Nenhum devocional encontrado nos últimos dias." });
+    } catch (error) {
+        console.error("Erro ao buscar devocional:", error);
+        res.status(500).json({ error: "Erro ao buscar o devocional." });
+    }
 }
