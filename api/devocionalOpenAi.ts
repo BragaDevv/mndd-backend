@@ -1,53 +1,48 @@
-// devocionalIa.ts
+// devocionalOpenAi.ts
 import { Request, Response } from "express";
 import fetch from "node-fetch";
-import OpenAI from "openai";
+import { htmlToText } from "html-to-text";
+import { OpenAI } from "openai";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || "",
-});
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export const devocionalIaHandler = async (req: Request, res: Response) => {
   try {
-    const url = "https://ministeriospaodiario.com.br/devocional";
-    const html = await fetch(url).then((r) => r.text());
+    const response = await fetch("https://ministeriospaodiario.com.br/devocional");
+    const html = await response.text();
+
+    const textoLimpo = htmlToText(html, {
+      wordwrap: false,
+      selectors: [
+        { selector: "a", format: "skip" },
+        { selector: "img", format: "skip" },
+      ],
+    });
+
+    const textoLimitado = textoLimpo.slice(0, 4000);
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo-16k", // ou "gpt-4" se tiver acesso
+      model: "gpt-4",
       messages: [
         {
           role: "system",
           content:
-            "Você é um assistente cristão que extrai devocionais de páginas HTML. Analise o HTML e extraia as informações em formato JSON.",
+            "Você é um assistente devocional cristão. Com base no conteúdo fornecido, extraia:\n1. Um título\n2. O versículo central\n3. Um devocional em até 4 parágrafos curtos.\nResponda no formato JSON com: { titulo, referencia, paragrafos }",
         },
         {
           role: "user",
-          content: `HTML da página:\n\n${html}\n\nExtraia:
-- título
-- data
-- referência bíblica
-- parágrafos do texto
-- resumo de 1 frase
-
-Responda em JSON.`,
+          content: textoLimitado,
         },
       ],
-      temperature: 0.3,
-      max_tokens: 2000,
+      temperature: 0.7,
     });
 
-    const resposta = completion.choices[0].message?.content;
-    if (!resposta || !resposta.includes("{")) {
-      return res.status(500).json({ error: "Resposta inesperada da IA." });
-    }
+    const resultado = completion.choices[0].message?.content || "";
+    const json = JSON.parse(resultado);
 
-    const jsonInicio = resposta.indexOf("{");
-    const json = resposta.slice(jsonInicio);
-
-    const resultado = JSON.parse(json);
-    return res.json({ devocional: resultado });
-  } catch (error) {
-    console.error("❌ Erro ao buscar devocional com IA:", error);
-    return res.status(500).json({ error: "Erro ao buscar devocional com IA." });
+    return res.status(200).json({ devocional: json });
+  } catch (error: any) {
+    console.error("❌ Erro ao gerar devocional com IA:", error);
+    return res.status(500).json({ erro: "Erro ao gerar devocional com IA" });
   }
 };
