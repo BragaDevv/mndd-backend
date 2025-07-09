@@ -11,6 +11,9 @@ async function buscarDevocionalPorData(data: Date) {
     const html = await response.text();
     const $ = cheerio.load(html);
 
+    console.log("🔍 HTML recebido:");
+    console.log(html.slice(0, 500)); // só os 500 primeiros caracteres para não poluir muito
+
     const titulo = $("article#devocional-detail h1").first().text().trim();
     const imagem = $("article#devocional-detail img").first().attr("src") || null;
 
@@ -29,7 +32,6 @@ async function buscarDevocionalPorData(data: Date) {
             link: url,
         };
     }
-
     console.log("🔎 Buscando devocional na data:", dataFormatada);
     return null;
 }
