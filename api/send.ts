@@ -13,10 +13,6 @@ import spotifyHandler from "./spotify";
 import rankingHandler from "./ranking";
 import cultosAvisoHandler from "./cultosAviso";
 import cifraHandler from "./cifra";
-import { adicionarMusicaSpotify } from "./spotify";
-
-
-
 
 dotenv.config();
 
@@ -128,9 +124,6 @@ app.get("/cultos/avisar", cultosAvisoHandler);
 
 // ✅ ROTA Spotify
 app.get("/spotify/louvores", spotifyHandler);
-
-// ✅ ROTA Spotify
-app.post("/spotify/adicionar", adicionarMusicaSpotify);
 
 // ✅ ROTA Cifra
 app.all("/cifras", cifraHandler); // cuida de GET e POST (mais flexível)
