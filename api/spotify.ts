@@ -34,7 +34,7 @@ async function getAccessToken(): Promise<string> {
   return data.access_token;
 }
 
-// Rota para retornar músicas da playlist
+// ✅ ROTA PARA LISTAR MÚSICAS DA PLAYLIST
 export default async function handler(req: Request, res: Response) {
   try {
     const token = await getAccessToken();
@@ -56,5 +56,55 @@ export default async function handler(req: Request, res: Response) {
   } catch (error) {
     console.error("Erro ao buscar playlist:", error);
     res.status(500).json({ error: "Erro ao buscar playlist" });
+  }
+}
+
+// ✅ ROTA PARA ADICIONAR MÚSICA NA PLAYLIST
+export async function adicionarMusicaSpotify(req: Request, res: Response) {
+  const { nome, artista } = req.body;
+
+  if (!nome || !artista) {
+    return res.status(400).json({ error: "Campos 'nome' e 'artista' são obrigatórios." });
+  }
+
+  try {
+    const token = await getAccessToken();
+
+    // 1. Buscar música no Spotify
+    const searchQuery = encodeURIComponent(`${nome} ${artista}`);
+    const searchResponse = await fetch(`https://api.spotify.com/v1/search?q=${searchQuery}&type=track&limit=1`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    type SpotifySearchResponse = {
+      tracks: { items: { uri: string }[] };
+    };
+
+    const searchData = (await searchResponse.json()) as SpotifySearchResponse;
+    const track = searchData.tracks.items[0];
+
+    if (!track) {
+      return res.status(404).json({ error: "Música não encontrada no Spotify." });
+    }
+
+    // 2. Adicionar à playlist
+    const addResponse = await fetch(`https://api.spotify.com/v1/playlists/${playlist_id}/tracks`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ uris: [track.uri] }),
+    });
+
+    if (!addResponse.ok) {
+      const error = await addResponse.text();
+      throw new Error(error);
+    }
+
+    return res.status(200).json({ success: true, uri: track.uri });
+  } catch (error) {
+    console.error("Erro ao adicionar música:", error);
+    return res.status(500).json({ error: "Erro ao adicionar música ao Spotify." });
   }
 }
