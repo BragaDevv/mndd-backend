@@ -13,8 +13,7 @@ import spotifyHandler from "./spotify";
 import rankingHandler from "./ranking";
 import cultosAvisoHandler from "./cultosAviso";
 import cifraHandler from "./cifra";
-import { devocionalHandler } from "./devocional";
-
+import { devocionalIaHandler } from "./devocionalOpenAi";
 
 dotenv.config();
 
@@ -48,7 +47,9 @@ app.post("/send", async (req: Request, res: Response) => {
   const { title, body, image, to, tokens } = req.body;
 
   if (!title || !body) {
-    return res.status(400).json({ error: "Campos 'title' e 'body' são obrigatórios." });
+    return res
+      .status(400)
+      .json({ error: "Campos 'title' e 'body' são obrigatórios." });
   }
 
   try {
@@ -64,7 +65,9 @@ app.post("/send", async (req: Request, res: Response) => {
       const snapshot = await admin.firestore().collection("usuarios").get();
       expoTokens = snapshot.docs
         .map((doc) => doc.data().expoToken)
-        .filter((t) => typeof t === "string" && t.startsWith("ExponentPushToken["));
+        .filter(
+          (t) => typeof t === "string" && t.startsWith("ExponentPushToken[")
+        );
     }
 
     if (expoTokens.length === 0) {
@@ -93,7 +96,11 @@ app.post("/send", async (req: Request, res: Response) => {
     const result = await expoResponse.json();
     console.log("📨 Notificações enviadas:", result);
 
-    return res.json({ success: true, sent: expoTokens.length, expoResult: result });
+    return res.json({
+      success: true,
+      sent: expoTokens.length,
+      expoResult: result,
+    });
   } catch (error) {
     console.error("❌ Erro ao enviar notificação:", error);
     return res.status(500).json({ error: "Erro ao enviar notificação." });
@@ -109,7 +116,11 @@ app.all("/versiculo-hora", versiculoHoraHandler);
 // ✅ Apenas GET (para segurança e fallback)
 app.get("/versiculo-hora", async (_req, res) => {
   try {
-    const doc = await admin.firestore().collection("configuracoes").doc("versiculo").get();
+    const doc = await admin
+      .firestore()
+      .collection("configuracoes")
+      .doc("versiculo")
+      .get();
     const data = doc.data();
     if (data?.hora) {
       return res.status(200).json({ hora: data.hora });
@@ -134,7 +145,7 @@ app.all("/cifras", cifraHandler); // cuida de GET e POST (mais flexível)
 app.get("/ranking/check", rankingHandler);
 
 // ✅ ROTA Devocional
-app.get("/devocional", devocionalHandler);
+app.get("/devocional-ia", devocionalIaHandler);
 
 // ✅ ROTA auxiliar para forçar a checagem externa
 app.get("/checar", async (_req, res) => {
