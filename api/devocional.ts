@@ -4,39 +4,32 @@ import * as cheerio from "cheerio";
 
 export async function devocionalHandler(req: Request, res: Response) {
   try {
-    const url = "https://www.bibliaonline.com.br/devocional-diario?b=acf";
-    const response = await fetch(url);
-    if (!response.ok) {
-      console.error(`❌ Erro HTTP ${response.status} ao buscar ${url}`);
-    }
-    const html = await response.text();
-    console.log("🔍 HTML bruto recebido:", html.slice(0, 1000)); // mostra os primeiros 1000 caracteres
+    const rssUrl = "https://paodiario.org/feed/";
+    const response = await fetch(rssUrl);
+    const xml = await response.text();
 
-    const $ = cheerio.load(html);
+    const $ = cheerio.load(xml, { xmlMode: true });
 
-    const titulo = $("h3.titulo").first().text().trim();
-    const versiculo = $("p.versiculo, div.devocional-content p strong")
-      .first()
-      .text()
-      .trim();
+    const firstItem = $("item").first();
 
-    const conteudo = $("div.devocional-content p")
-      .map((_, el) => $(el).text().trim())
-      .get()
-      .join("\n\n");
+    const titulo = firstItem.find("title").text();
+    const publicado = firstItem.find("pubDate").text();
+    const link = firstItem.find("link").text();
+    const rawDescription = firstItem.find("description").text();
 
-    if (!titulo || !conteudo) {
-      return res.status(404).json({ error: "Devocional não encontrado." });
-    }
+    // 🧼 Limpa o conteúdo do <description> (vem com <p>, <br>, etc)
+    const $$ = cheerio.load(rawDescription);
+    const conteudo = $$.text().replace(/\s+/g, " ").trim();
 
     return res.json({
-      titulo,
-      versiculo,
+      titulo: titulo || "Devocional",
+      publicado,
+      link,
       conteudo,
-      link: url,
+      imagem: null, // não tem imagem nesse feed
     });
-  } catch (err) {
-    console.error("Erro ao buscar devocional:", err);
+  } catch (error) {
+    console.error("❌ Erro ao buscar devocional RSS:", error);
     return res.status(500).json({ error: "Erro ao buscar devocional." });
   }
 }
