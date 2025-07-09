@@ -1,37 +1,51 @@
-// src/devocional.ts
 import { Request, Response } from "express";
-import Parser from "rss-parser";
-import { JSDOM } from "jsdom";
+import fetch from "node-fetch";
+import * as cheerio from "cheerio";
 
-const parser = new Parser();
-
-export const devocionalHandler = async (req: Request, res: Response) => {
+export const devocionalHandler = async (_req: Request, res: Response) => {
   try {
-    const feed = await parser.parseURL("https://api.rbc.org.br/pao-diario/feed/acf");
+    const hoje = new Date();
+    const dia = String(hoje.getDate()).padStart(2, "0");
+    const mes = String(hoje.getMonth() + 1).padStart(2, "0");
+    const ano = hoje.getFullYear();
+    const url = `https://ministeriospaodiario.com.br/devocional?date=${dia}/${mes}/${ano}`;
 
-    if (!feed || !feed.items || feed.items.length === 0) {
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/91.0.4472.124 Safari/537.36",
+      },
+    });
+
+    const html = await response.text();
+
+    const $ = cheerio.load(html);
+
+    const titulo = $(".content-title").first().text().trim();
+    const referencia = $(".verse-bible a").first().text().trim();
+
+    const paragrafos: string[] = [];
+    $(".devocional-paragraph p").each((_, el) => {
+      const texto = $(el).text().trim();
+      if (texto) paragrafos.push(texto);
+    });
+
+    const conteudo = paragrafos.join("\n\n");
+
+    if (!conteudo || !titulo) {
+      console.warn("⚠️ Conteúdo ou título vazio");
       return res.status(404).json({ error: "Devocional não encontrado." });
     }
 
-    const primeiro = feed.items[0]; // Devocional mais recente
-
-    const titulo = primeiro.title || "Devocional";
-    const link = primeiro.link || "";
-    const publicado = primeiro.pubDate || "";
-
-    let conteudoHTML = primeiro["content:encoded"] || primeiro.content || "";
-    const dom = new JSDOM(conteudoHTML);
-    const texto = dom.window.document.body.textContent || "";
-
     return res.status(200).json({
       titulo,
-      publicado,
-      link,
-      conteudo: texto.trim(),
-      imagem: null,
+      publicado: `${dia}/${mes}/${ano}`,
+      referencia,
+      conteudo,
+      link: url,
     });
   } catch (error) {
-    console.error("Erro ao buscar devocional RSS:", error);
+    console.error("❌ Erro ao buscar devocional:", error);
     return res.status(500).json({ error: "Erro ao buscar devocional." });
   }
 };
