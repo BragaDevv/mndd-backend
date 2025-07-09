@@ -1,57 +1,48 @@
+// devocional.ts - Rota para extrair devocional do Pão Diário com Puppeteer no Render
+
 import { Request, Response } from "express";
-import fetch from "node-fetch";
-import * as cheerio from "cheerio";
+import puppeteer from "puppeteer";
 
-export const devocionalHandler = async (_req: Request, res: Response) => {
+export async function devocionalHandler(_req: Request, res: Response) {
   try {
-    const hoje = new Date();
-    const dia = String(hoje.getDate()).padStart(2, "0");
-    const mes = String(hoje.getMonth() + 1).padStart(2, "0");
-    const ano = hoje.getFullYear();
-    const url = `https://ministeriospaodiario.com.br/devocional?date=${dia}/${mes}/${ano}`;
-
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/91.0.4472.124 Safari/537.36",
-      },
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
 
-    const html = await response.text();
-    console.log("📄 HTML recebido:\n", html.substring(0, 1000)); // mostra só os primeiros 1000 caracteres
+    const page = await browser.newPage();
+    const url = `https://ministeriospaodiario.com.br/devocional`;
+    await page.goto(url, { waitUntil: "domcontentloaded" });
 
-    const $ = cheerio.load(html);
+    // Aguarda os elementos carregarem
+    await page.waitForSelector("h1");
 
-    const titulo = $(".content-title").first().text().trim();
-    const referencia = $(".verse-bible a").first().text().trim();
+    const dados = await page.evaluate(() => {
+      const titulo = document.querySelector("h1")?.textContent?.trim() || "";
 
-    const paragrafos: string[] = [];
-    $(".devocional-paragraph p").each((_, el) => {
-      const texto = $(el).text().trim();
-      if (texto) paragrafos.push(texto);
+      const versiculo = document.querySelector("h2")?.textContent?.trim() || "";
+
+      const paragrafos = Array.from(
+        document.querySelectorAll("article p")
+      ).map((el) => el.textContent?.trim()).filter(Boolean);
+
+      const conteudo = paragrafos.join("\n\n");
+
+      const link = window.location.href;
+
+      return { titulo, versiculo, conteudo, link };
     });
 
-    const conteudo = paragrafos.join("\n\n");
+    await browser.close();
 
-    if (!conteudo || !titulo) {
+    if (!dados.conteudo || !dados.titulo) {
       console.warn("⚠️ Conteúdo ou título vazio");
-      console.warn("📛 Dados extraídos:");
-      console.warn("Título:", titulo);
-      console.warn("Parágrafos:", paragrafos.length);
-      console.warn("Conteúdo:", conteudo);
-
       return res.status(404).json({ error: "Devocional não encontrado." });
     }
 
-    return res.status(200).json({
-      titulo,
-      publicado: `${dia}/${mes}/${ano}`,
-      referencia,
-      conteudo,
-      link: url,
-    });
+    return res.json(dados);
   } catch (error) {
     console.error("❌ Erro ao buscar devocional:", error);
     return res.status(500).json({ error: "Erro ao buscar devocional." });
   }
-};
+}
