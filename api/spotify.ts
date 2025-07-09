@@ -13,37 +13,52 @@ async function getAccessToken(): Promise<string> {
   const response = await fetch("https://accounts.spotify.com/api/token", {
     method: "POST",
     headers: {
-      Authorization: "Basic " + Buffer.from(`${client_id}:${client_secret}`).toString("base64"),
+      Authorization:
+        "Basic " +
+        Buffer.from(`${client_id}:${client_secret}`).toString("base64"),
       "Content-Type": "application/x-www-form-urlencoded",
     },
     body: `grant_type=refresh_token&refresh_token=${refresh_token}`,
   });
 
-  const data = await response.json() as { access_token: string };
+  const data = (await response.json()) as { access_token: string };
+
+  if (!data.access_token) {
+    throw new Error("Não foi possível obter o access_token do Spotify.");
+  }
+
   return data.access_token;
 }
+
+// ✅ TIPAGEM DA PLAYLIST
+type SpotifyTrackResponse = {
+  items: {
+    track: {
+      name: string;
+      artists: { name: string }[];
+      album: { images: { url: string }[] };
+      duration_ms: number;
+    };
+  }[];
+};
 
 // ✅ LISTAR MÚSICAS DA PLAYLIST
 export default async function handler(req: Request, res: Response) {
   try {
     const token = await getAccessToken();
 
-    const response = await fetch(`https://api.spotify.com/v1/playlists/${playlist_id}/tracks`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await fetch(
+      `https://api.spotify.com/v1/playlists/${playlist_id}/tracks`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
 
-    type SpotifyTrackResponse = {
-      items: {
-        track: {
-          name: string;
-          artists: { name: string }[];
-          album: { images: { url: string }[] };
-          duration_ms: number;
-        };
-      }[];
-    };
+    const data = (await response.json()) as SpotifyTrackResponse;
 
-    const data = await response.json() as SpotifyTrackResponse;
+    if (!data.items || !Array.isArray(data.items)) {
+      throw new Error("Resposta inesperada da API do Spotify.");
+    }
 
     const musicas = data.items.map((item) => ({
       nome: item.track.name,
@@ -64,16 +79,21 @@ export async function adicionarMusicaSpotify(req: Request, res: Response) {
   const { nome, artista } = req.body;
 
   if (!nome || !artista) {
-    return res.status(400).json({ error: "Campos 'nome' e 'artista' são obrigatórios." });
+    return res
+      .status(400)
+      .json({ error: "Campos 'nome' e 'artista' são obrigatórios." });
   }
 
   try {
     const token = await getAccessToken();
 
     const query = encodeURIComponent(`${nome} ${artista}`);
-    const searchResponse = await fetch(`https://api.spotify.com/v1/search?q=${query}&type=track&limit=1`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const searchResponse = await fetch(
+      `https://api.spotify.com/v1/search?q=${query}&type=track&limit=1`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
 
     type SpotifySearchResponse = {
       tracks: {
@@ -87,30 +107,42 @@ export async function adicionarMusicaSpotify(req: Request, res: Response) {
       };
     };
 
-    const searchData = await searchResponse.json() as SpotifySearchResponse;
-    const track = searchData.tracks?.items?.[0];
+    const searchData = (await searchResponse.json()) as SpotifySearchResponse;
 
-    if (!track) {
-      return res.status(404).json({ error: "Música não encontrada no Spotify." });
+    if (
+      !searchData?.tracks?.items ||
+      searchData.tracks.items.length === 0
+    ) {
+      return res
+        .status(404)
+        .json({ error: "Música não encontrada no Spotify." });
     }
 
-    const addResponse = await fetch(`https://api.spotify.com/v1/playlists/${playlist_id}/tracks`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ uris: [track.uri] }),
-    });
+    const track = searchData.tracks.items[0];
+
+    const addResponse = await fetch(
+      `https://api.spotify.com/v1/playlists/${playlist_id}/tracks`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ uris: [track.uri] }),
+      }
+    );
 
     if (!addResponse.ok) {
       const errorText = await addResponse.text();
+      console.error("Erro ao adicionar música:", addResponse.status, errorText);
       throw new Error(errorText);
     }
 
     return res.status(200).json({ success: true, uri: track.uri });
   } catch (error) {
     console.error("Erro ao adicionar música:", error);
-    return res.status(500).json({ error: "Erro ao adicionar música ao Spotify." });
+    return res
+      .status(500)
+      .json({ error: "Erro ao adicionar música ao Spotify." });
   }
 }
