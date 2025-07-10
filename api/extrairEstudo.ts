@@ -42,7 +42,7 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
 
       imgTags.forEach((img) => {
         const src = img.getAttribute("src");
-        if (src && src.startsWith("http")) {
+        if (src && src.startsWith("http") && !src.includes("data:image/svg+xml")) {
           imagens.push(src);
         }
       });
@@ -63,6 +63,7 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
       .filter(
         (p) =>
           p.length > 20 &&
+          !p.startsWith("data:image/svg+xml") &&
           !/^autor[:\-]/i.test(p) &&
           !p.toLowerCase().includes("divulgação") &&
           !p.toLowerCase().startsWith("| autor")
