@@ -95,13 +95,14 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
 
     const palavrasChave = ["Jesus", "Deus", "Espírito Santo", "fé", "graça"];
     const referenciasRegex =
-      /\b(\d?\s?[A-ZÀ-Úa-zà-ú]{3,}(?:\s+[A-ZÀ-Úa-zà-ú]+)?\s+\d{1,3}[:.]\d{1,3})\b/g;
+      /(?:\d{1,2}[\.\-:]\s*)?(\d?\s?[A-ZÀ-Úa-zà-ú]{3,}(?:\s+[A-ZÀ-Úa-zà-ú]+)*\s+\d{1,3}[:.]\d{1,3})/g;
 
     const paragrafosTratados = unicos.map((p) => {
       if (p.startsWith("http")) return p;
 
       let texto = p;
 
+      // Destacar subtítulos
       const eSubtitulo =
         texto.length < 100 &&
         !texto.startsWith("http") &&
@@ -111,12 +112,14 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
         texto = `**${texto}**`;
       }
 
+      // Destacar palavras-chave
       palavrasChave.forEach((palavra) => {
         const regex = new RegExp(`\\b(${palavra})\\b`, "gi");
         texto = texto.replace(regex, "*$1*");
       });
 
-      texto = texto.replace(referenciasRegex, "*$1*");
+      // Destacar referências bíblicas (com ou sem número na frente)
+      texto = texto.replace(referenciasRegex, (_match, ref) => `*${ref}*`);
 
       return texto;
     });
