@@ -27,8 +27,8 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
       conteudoHTML = doc.querySelector(".com-content-article__body")?.innerHTML || "";
     }
 
-    else if (url.includes("estudoscristaos.com")) {
-      // --------- SITE: estudoscristaos.com ---------
+    else if (url.includes("bibliotecadopregador.com.br")) {
+      // --------- SITE: bibliotecadopregador.com.br ---------
       titulo = doc.querySelector("h1.entry-title")?.textContent?.trim() || titulo;
       conteudoHTML = doc.querySelector("div.td-post-content")?.innerHTML || "";
     }
