@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import admin from "firebase-admin";
 import fetch from "node-fetch";
 import { JSDOM } from "jsdom";
-import { htmlToText } from "html-to-text";
 
 export async function extrairEstudoHandler(req: Request, res: Response) {
   const { url, tema: temaEnviado } = req.body;
@@ -19,7 +18,7 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
 
     let titulo = "Estudo Sem Título";
     let conteudoHTML = "";
-    const imagens: string[] = [];
+    const paragrafos: string[] = [];
 
     if (url.includes("estudosgospel.com.br")) {
       // --------- SITE: estudosgospel.com.br ---------
@@ -31,19 +30,32 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
     else if (url.includes("bibliotecadopregador.com.br")) {
       // --------- SITE: bibliotecadopregador.com.br ---------
       titulo = doc.querySelector("h1.entry-title")?.textContent?.trim() || titulo;
-      conteudoHTML =
-        doc.querySelector("#the-post")?.innerHTML ||  // ✅ seletor novo
-        doc.querySelector("div.td-post-content")?.innerHTML ||  // fallback antigo
-        doc.querySelector("article")?.innerHTML || "";
+      const container =
+        doc.querySelector("#the-post") ||
+        doc.querySelector("div.td-post-content") ||
+        doc.querySelector("article");
 
-      // 1. Extrair imagens
+      if (!container) throw new Error("Conteúdo não encontrado.");
 
-      const imgTags = dom.window.document.querySelectorAll("#the-post img"); // use o mesmo seletor do conteúdo
+      // --------- Intercalar texto e imagens ---------
+      container.querySelectorAll("p, img").forEach((el) => {
+        if (el.tagName.toLowerCase() === "p") {
+          const texto = el.textContent?.trim();
+          if (
+            texto &&
+            texto.length > 20 &&
+            !/^autor[:\-]/i.test(texto) &&
+            !texto.toLowerCase().includes("divulgação")
+          ) {
+            paragrafos.push(texto);
+          }
+        }
 
-      imgTags.forEach((img) => {
-        const src = img.getAttribute("src");
-        if (src && src.startsWith("http") && !src.includes("data:image/svg+xml")) {
-          imagens.push(src);
+        if (el.tagName.toLowerCase() === "img") {
+          const src = el.getAttribute("src");
+          if (src && src.startsWith("http") && !src.includes("data:image/svg+xml")) {
+            paragrafos.push(src); // a imagem é colocada no mesmo array, mantendo a ordem
+          }
         }
       });
     }
@@ -54,21 +66,7 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
 
     const tema = temaEnviado?.trim() || titulo.split("–")[0]?.trim() || "Geral";
 
-    let paragrafos = htmlToText(conteudoHTML, {
-      wordwrap: false,
-      selectors: [{ selector: "a", format: "skip" }],
-    })
-      .split("\n")
-      .map((p) => p.trim())
-      .filter(
-        (p) =>
-          p.length > 20 &&
-          !p.startsWith("data:image/svg+xml") &&
-          !/^autor[:\-]/i.test(p) &&
-          !p.toLowerCase().includes("divulgação") &&
-          !p.toLowerCase().startsWith("| autor")
-      );
-
+    // Remover o título duplicado no início
     if (paragrafos.length > 0 && paragrafos[0].toLowerCase().includes(titulo.toLowerCase())) {
       paragrafos.shift();
     }
@@ -77,7 +75,9 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
     const palavrasChave = ["Jesus", "Deus", "Espírito Santo", "fé", "graça"];
     const referenciasRegex = /\b(\d?\s?[A-Za-z]{2,}\s?\d{1,3}[:.]\d{1,3})\b/g;
 
-    paragrafos = paragrafos.map((p) => {
+    const paragrafosTratados = paragrafos.map((p) => {
+      if (p.startsWith("http")) return p; // imagem, não aplicar destaque
+
       let texto = p;
       palavrasChave.forEach((palavra) => {
         const regex = new RegExp(`\\b(${palavra})\\b`, "gi");
@@ -92,14 +92,13 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
     await admin.firestore().collection("estudos_biblicos").add({
       titulo,
       tema,
-      paragrafos,
-      imagens,
+      paragrafos: paragrafosTratados,
       criadoEm: admin.firestore.FieldValue.serverTimestamp(),
       urlOriginal: url,
       dataPublicacao: data,
     });
 
-    return res.status(200).json({ success: true, titulo, tema, paragrafos });
+    return res.status(200).json({ success: true, titulo, tema, paragrafos: paragrafosTratados });
   } catch (error) {
     console.error("❌ Erro ao extrair estudo:", error);
     return res.status(500).json({ error: "Erro ao processar o estudo." });
