@@ -31,7 +31,14 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
     })
       .split("\n")
       .map((p) => p.trim())
-      .filter(p => p.length > 20 && !/^autor[:\-]/i.test(p)); // ⬅ remove "Autor: ..." no final
+      .filter(
+        (p) =>
+          p.length > 20 &&
+          !/^autor[:\-]/i.test(p) &&
+          !p.toLowerCase().includes("divulgação") &&
+          !p.toLowerCase().startsWith("| autor")
+      );
+
 
 
     // Remover parágrafo duplicado do título
