@@ -38,8 +38,10 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
       if (!container) throw new Error("Conteúdo não encontrado.");
 
       // --------- Intercalar texto e imagens ---------
-      container.querySelectorAll("p, img").forEach((el) => {
-        if (el.tagName.toLowerCase() === "p") {
+      container.querySelectorAll("p, img, figure").forEach((el) => {
+        const tag = el.tagName.toLowerCase();
+
+        if (tag === "p") {
           const texto = el.textContent?.trim();
           if (
             texto &&
@@ -51,54 +53,61 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
           }
         }
 
-        if (el.tagName.toLowerCase() === "img") {
+        if (tag === "img") {
           const src = el.getAttribute("src");
           if (src && src.startsWith("http") && !src.includes("data:image/svg+xml")) {
-            paragrafos.push(src); // a imagem é colocada no mesmo array, mantendo a ordem
+            paragrafos.push(src);
+          }
+        }
+
+        if (tag === "figure") {
+          const img = el.querySelector("img");
+          const src = img?.getAttribute("src");
+          if (src && src.startsWith("http") && !src.includes("data:image/svg+xml")) {
+            paragrafos.push(src);
           }
         }
       });
-    }
 
-    else {
+      const tema = temaEnviado?.trim() || titulo.split("–")[0]?.trim() || "Geral";
+
+      // Remover o título duplicado no início
+      if (paragrafos.length > 0 && paragrafos[0].toLowerCase().includes(titulo.toLowerCase())) {
+        paragrafos.shift();
+      }
+
+      // Destacar palavras-chave e referências bíblicas
+      const palavrasChave = ["Jesus", "Deus", "Espírito Santo", "fé", "graça"];
+      const referenciasRegex = /\b(\d?\s?[A-Za-z]{2,}\s?\d{1,3}[:.]\d{1,3})\b/g;
+
+      const paragrafosTratados = paragrafos.map((p) => {
+        if (p.startsWith("http")) return p; // imagem, não aplicar destaque
+
+        let texto = p;
+        palavrasChave.forEach((palavra) => {
+          const regex = new RegExp(`\\b(${palavra})\\b`, "gi");
+          texto = texto.replace(regex, "*$1*");
+        });
+        texto = texto.replace(referenciasRegex, "*$1*");
+        return texto;
+      });
+
+      const data = new Date().toISOString();
+
+      await admin.firestore().collection("estudos_biblicos").add({
+        titulo,
+        tema,
+        paragrafos: paragrafosTratados,
+        criadoEm: admin.firestore.FieldValue.serverTimestamp(),
+        urlOriginal: url,
+        dataPublicacao: data,
+      });
+
+      return res.status(200).json({ success: true, titulo, tema, paragrafos: paragrafosTratados });
+    } else {
       return res.status(400).json({ error: "Este domínio ainda não é suportado." });
     }
 
-    const tema = temaEnviado?.trim() || titulo.split("–")[0]?.trim() || "Geral";
-
-    // Remover o título duplicado no início
-    if (paragrafos.length > 0 && paragrafos[0].toLowerCase().includes(titulo.toLowerCase())) {
-      paragrafos.shift();
-    }
-
-    // Destacar palavras-chave e referências bíblicas
-    const palavrasChave = ["Jesus", "Deus", "Espírito Santo", "fé", "graça"];
-    const referenciasRegex = /\b(\d?\s?[A-Za-z]{2,}\s?\d{1,3}[:.]\d{1,3})\b/g;
-
-    const paragrafosTratados = paragrafos.map((p) => {
-      if (p.startsWith("http")) return p; // imagem, não aplicar destaque
-
-      let texto = p;
-      palavrasChave.forEach((palavra) => {
-        const regex = new RegExp(`\\b(${palavra})\\b`, "gi");
-        texto = texto.replace(regex, "*$1*");
-      });
-      texto = texto.replace(referenciasRegex, "*$1*");
-      return texto;
-    });
-
-    const data = new Date().toISOString();
-
-    await admin.firestore().collection("estudos_biblicos").add({
-      titulo,
-      tema,
-      paragrafos: paragrafosTratados,
-      criadoEm: admin.firestore.FieldValue.serverTimestamp(),
-      urlOriginal: url,
-      dataPublicacao: data,
-    });
-
-    return res.status(200).json({ success: true, titulo, tema, paragrafos: paragrafosTratados });
   } catch (error) {
     console.error("❌ Erro ao extrair estudo:", error);
     return res.status(500).json({ error: "Erro ao processar o estudo." });
