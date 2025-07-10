@@ -15,6 +15,7 @@ import rankingHandler from "./ranking";
 import cultosAvisoHandler from "./cultosAviso";
 import cifraHandler from "./cifra";
 import { salvarDevocionalDiario } from "./saveDevocionalDiario";
+import { extrairEstudoHandler } from "./extrairEstudo";
 
 dotenv.config();
 
@@ -144,6 +145,10 @@ app.all("/cifras", cifraHandler); // cuida de GET e POST (mais flexível)
 
 // ✅ ROTA Ranking
 app.get("/ranking/check", rankingHandler);
+
+// ✅ ROTA Estudo
+app.post("/api/extrair-estudo", extrairEstudoHandler);
+
 
 // ✅ ROTA Devocional IA
 app.get("/api/devocional/criar", async (_req, res) => {
