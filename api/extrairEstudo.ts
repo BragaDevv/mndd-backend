@@ -38,14 +38,14 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
 
     const paragrafos: string[] = [];
 
-    container.querySelectorAll("p, img, figure").forEach((el) => {
+    container.querySelectorAll("p, h1, h2, h3, img, figure").forEach((el) => {
       const tag = el.tagName.toLowerCase();
 
-      if (tag === "p") {
+      if (["p", "h1", "h2", "h3"].includes(tag)) {
         const texto = el.textContent?.trim();
         if (
           texto &&
-          texto.length > 20 &&
+          texto.length > 5 &&
           !/^autor[:\-]/i.test(texto) &&
           !texto.toLowerCase().includes("divulgação")
         ) {
@@ -56,7 +56,11 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
       if (tag === "img") {
         const rawSrc = el.getAttribute("data-src") || el.getAttribute("src");
         const src = rawSrc ? completarUrl(rawSrc, url) : "";
-        if (src && !src.includes("svg")) {
+        if (
+          src &&
+          !src.includes("svg") &&
+          !src.toLowerCase().includes("autor")
+        ) {
           console.log("📸 IMG SRC:", src);
           paragrafos.push(src);
         }
@@ -66,7 +70,11 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
         const img = el.querySelector("img");
         const rawSrc = img?.getAttribute("data-src") || img?.getAttribute("src");
         const src = rawSrc ? completarUrl(rawSrc, url) : "";
-        if (src && !src.includes("svg")) {
+        if (
+          src &&
+          !src.includes("svg") &&
+          !src.toLowerCase().includes("autor")
+        ) {
           console.log("📸 FIGURE SRC:", src);
           paragrafos.push(src);
         }
@@ -83,12 +91,26 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
 
     const paragrafosTratados = unicos.map((p) => {
       if (p.startsWith("http")) return p;
+
       let texto = p;
+
+      // Detecta e destaca subtítulos prováveis
+      const eSubtitulo =
+        texto.length < 100 &&
+        /^[A-ZÀ-Ú]/.test(texto) &&
+        /[?:.!]$/.test(texto);
+
+      if (eSubtitulo) {
+        texto = `**${texto}**`;
+      }
+
       palavrasChave.forEach((palavra) => {
         const regex = new RegExp(`\\b(${palavra})\\b`, "gi");
         texto = texto.replace(regex, "*$1*");
       });
+
       texto = texto.replace(referenciasRegex, "*$1*");
+
       return texto;
     });
 
