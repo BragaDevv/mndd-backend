@@ -19,7 +19,7 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
     const doc = dom.window.document;
 
     const titulo = doc.querySelector("h1")?.textContent?.trim() || "Estudo Sem Título";
-    const tema = titulo.split("–")[0]?.trim() || "Geral";
+    const tema = req.body.tema?.trim() || titulo.split("–")[0]?.trim() || "Geral";
 
     const conteudoDiv = doc.querySelector(".com-content-article__body");
     const paragrafos = htmlToText(conteudoDiv?.innerHTML || "", {
