@@ -19,7 +19,7 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
 
     let titulo = "Estudo Sem Título";
     let conteudoHTML = "";
-    
+
     if (url.includes("estudosgospel.com.br")) {
       // --------- SITE: estudosgospel.com.br ---------
       titulo = doc.querySelector("h1")?.textContent?.trim() || titulo;
@@ -30,7 +30,10 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
     else if (url.includes("bibliotecadopregador.com.br")) {
       // --------- SITE: bibliotecadopregador.com.br ---------
       titulo = doc.querySelector("h1.entry-title")?.textContent?.trim() || titulo;
-      conteudoHTML = doc.querySelector("div.td-post-content")?.innerHTML || "";
+      conteudoHTML =
+        doc.querySelector("#the-post")?.innerHTML ||  // ✅ seletor novo
+        doc.querySelector("div.td-post-content")?.innerHTML ||  // fallback antigo
+        doc.querySelector("article")?.innerHTML || "";
     }
 
     else {
