@@ -19,6 +19,7 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
 
     let titulo = "Estudo Sem Título";
     let conteudoHTML = "";
+    const imagens: string[] = [];
 
     if (url.includes("estudosgospel.com.br")) {
       // --------- SITE: estudosgospel.com.br ---------
@@ -34,6 +35,17 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
         doc.querySelector("#the-post")?.innerHTML ||  // ✅ seletor novo
         doc.querySelector("div.td-post-content")?.innerHTML ||  // fallback antigo
         doc.querySelector("article")?.innerHTML || "";
+
+      // 1. Extrair imagens
+
+      const imgTags = dom.window.document.querySelectorAll("#the-post img"); // use o mesmo seletor do conteúdo
+
+      imgTags.forEach((img) => {
+        const src = img.getAttribute("src");
+        if (src && src.startsWith("http")) {
+          imagens.push(src);
+        }
+      });
     }
 
     else {
@@ -80,6 +92,7 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
       titulo,
       tema,
       paragrafos,
+      imagens,
       criadoEm: admin.firestore.FieldValue.serverTimestamp(),
       urlOriginal: url,
       dataPublicacao: data,
