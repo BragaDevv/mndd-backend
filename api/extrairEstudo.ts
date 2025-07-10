@@ -54,7 +54,7 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
         }
 
         if (tag === "img") {
-          const src = el.getAttribute("src");
+          const src = el.getAttribute("data-src") || el.getAttribute("src");
           if (src && src.startsWith("http") && !src.includes("data:image/svg+xml")) {
             paragrafos.push(src);
           }
@@ -62,7 +62,7 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
 
         if (tag === "figure") {
           const img = el.querySelector("img");
-          const src = img?.getAttribute("src");
+          const src = img?.getAttribute("data-src") || img?.getAttribute("src");
           if (src && src.startsWith("http") && !src.includes("data:image/svg+xml")) {
             paragrafos.push(src);
           }
