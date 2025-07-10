@@ -94,19 +94,18 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
     }
 
     const palavrasChave = ["Jesus", "Deus", "Espírito Santo", "fé", "graça"];
-    const referenciasRegex = /\b(\d?\s?[A-Za-z]{2,}\s?\d{1,3}[:.]\d{1,3})\b/g;
+    const referenciasRegex =
+      /\b(\d?\s?[A-ZÀ-Úa-zà-ú]{3,}(?:\s+[A-ZÀ-Úa-zà-ú]+)?\s+\d{1,3}[:.]\d{1,3})\b/g;
 
     const paragrafosTratados = unicos.map((p) => {
       if (p.startsWith("http")) return p;
 
       let texto = p;
 
-      // Detecta e destaca subtítulos prováveis
       const eSubtitulo =
         texto.length < 100 &&
         !texto.startsWith("http") &&
-        (/^[A-ZÀ-Ú]/.test(texto) || // começa com letra maiúscula
-          /^\d+[\.\-:]\s?[A-ZÀ-Ú]/.test(texto)); // ou começa com "1. " ou "1- " etc.
+        (/^[A-ZÀ-Ú]/.test(texto) || /^\d+[\.\-:]\s?[A-ZÀ-Ú]/.test(texto));
 
       if (eSubtitulo) {
         texto = `**${texto}**`;
