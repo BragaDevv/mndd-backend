@@ -7,8 +7,8 @@ import { htmlToText } from "html-to-text";
 export async function extrairEstudoHandler(req: Request, res: Response) {
   const { url, tema: temaEnviado } = req.body;
 
-  if (!url || !url.includes("estudosgospel.com.br")) {
-    return res.status(400).json({ error: "URL inválida ou não suportada." });
+  if (!url) {
+    return res.status(400).json({ error: "URL não informada." });
   }
 
   try {
@@ -17,15 +17,29 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
     const dom = new JSDOM(html);
     const doc = dom.window.document;
 
-    // Limpar título
-    let titulo = doc.querySelector("h1")?.textContent?.trim() || "Estudo Sem Título";
-    titulo = titulo.replace(/^Estudo Bíblico[\s:-]*/i, "").trim();
+    let titulo = "Estudo Sem Título";
+    let conteudoHTML = "";
+    
+    if (url.includes("estudosgospel.com.br")) {
+      // --------- SITE: estudosgospel.com.br ---------
+      titulo = doc.querySelector("h1")?.textContent?.trim() || titulo;
+      titulo = titulo.replace(/^Estudo Bíblico[\s:-]*/i, "").trim();
+      conteudoHTML = doc.querySelector(".com-content-article__body")?.innerHTML || "";
+    }
+
+    else if (url.includes("estudoscristaos.com")) {
+      // --------- SITE: estudoscristaos.com ---------
+      titulo = doc.querySelector("h1.entry-title")?.textContent?.trim() || titulo;
+      conteudoHTML = doc.querySelector("div.td-post-content")?.innerHTML || "";
+    }
+
+    else {
+      return res.status(400).json({ error: "Este domínio ainda não é suportado." });
+    }
 
     const tema = temaEnviado?.trim() || titulo.split("–")[0]?.trim() || "Geral";
 
-    // Extrair e limpar conteúdo
-    const conteudoDiv = doc.querySelector(".com-content-article__body");
-    let paragrafos = htmlToText(conteudoDiv?.innerHTML || "", {
+    let paragrafos = htmlToText(conteudoHTML, {
       wordwrap: false,
       selectors: [{ selector: "a", format: "skip" }],
     })
@@ -39,32 +53,21 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
           !p.toLowerCase().startsWith("| autor")
       );
 
-
-
-    // Remover parágrafo duplicado do título
-    if (
-      paragrafos.length > 0 &&
-      paragrafos[0].toLowerCase().includes(titulo.toLowerCase())
-    ) {
+    if (paragrafos.length > 0 && paragrafos[0].toLowerCase().includes(titulo.toLowerCase())) {
       paragrafos.shift();
     }
 
-    // Destacar palavras-chave
+    // Destacar palavras-chave e referências bíblicas
     const palavrasChave = ["Jesus", "Deus", "Espírito Santo", "fé", "graça"];
-    const referenciasRegex = /\b(\d?\s?[A-Za-z]{2,}\s?\d{1,3}[:.]\d{1,3})\b/g; // ex: João 3:16, Mt 5.9
+    const referenciasRegex = /\b(\d?\s?[A-Za-z]{2,}\s?\d{1,3}[:.]\d{1,3})\b/g;
 
     paragrafos = paragrafos.map((p) => {
       let texto = p;
-
-      // Negrito para palavras-chave
       palavrasChave.forEach((palavra) => {
         const regex = new RegExp(`\\b(${palavra})\\b`, "gi");
         texto = texto.replace(regex, "*$1*");
       });
-
-      // Negrito para referências bíblicas
       texto = texto.replace(referenciasRegex, "*$1*");
-
       return texto;
     });
 
@@ -73,7 +76,7 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
     await admin.firestore().collection("estudos_biblicos").add({
       titulo,
       tema,
-      paragrafos, // apenas este campo agora
+      paragrafos,
       criadoEm: admin.firestore.FieldValue.serverTimestamp(),
       urlOriginal: url,
       dataPublicacao: data,
