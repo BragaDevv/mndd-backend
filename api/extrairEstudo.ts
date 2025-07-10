@@ -17,15 +17,13 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
     const dom = new JSDOM(html);
     const doc = dom.window.document;
 
-    // Captura e limpeza do título
-    let tituloOriginal = doc.querySelector("h1")?.textContent?.trim() || "Estudo Sem Título";
+    // Limpar título
+    let titulo = doc.querySelector("h1")?.textContent?.trim() || "Estudo Sem Título";
+    titulo = titulo.replace(/^Estudo Bíblico[\s:-]*/i, "").trim();
 
-    // Remove prefixos genéricos como "Estudo Bíblico:"
-    tituloOriginal = tituloOriginal.replace(/^Estudo Bíblico[\s:-]*/i, "").trim();
+    const tema = temaEnviado?.trim() || titulo.split("–")[0]?.trim() || "Geral";
 
-    const tema = temaEnviado?.trim() || tituloOriginal.split("–")[0]?.trim() || "Geral";
-
-    // Extração e limpeza dos parágrafos
+    // Extrair e limpar conteúdo
     const conteudoDiv = doc.querySelector(".com-content-article__body");
     let paragrafos = htmlToText(conteudoDiv?.innerHTML || "", {
       wordwrap: false,
@@ -35,32 +33,45 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
       .map((p) => p.trim())
       .filter((p) => p.length > 20);
 
-    // Remove o primeiro parágrafo se ele for idêntico ao título
+    // Remover parágrafo duplicado do título
     if (
       paragrafos.length > 0 &&
-      paragrafos[0].toLowerCase() === tituloOriginal.toLowerCase()
+      paragrafos[0].toLowerCase().includes(titulo.toLowerCase())
     ) {
       paragrafos.shift();
     }
 
+    // Destacar palavras-chave
+    const palavrasChave = ["Jesus", "Deus", "Espírito Santo", "fé", "graça"];
+    const referenciasRegex = /\b(\d?\s?[A-Za-z]{2,}\s?\d{1,3}[:.]\d{1,3})\b/g; // ex: João 3:16, Mt 5.9
+
+    paragrafos = paragrafos.map((p) => {
+      let texto = p;
+
+      // Negrito para palavras-chave
+      palavrasChave.forEach((palavra) => {
+        const regex = new RegExp(`\\b(${palavra})\\b`, "gi");
+        texto = texto.replace(regex, "*$1*");
+      });
+
+      // Negrito para referências bíblicas
+      texto = texto.replace(referenciasRegex, "*$1*");
+
+      return texto;
+    });
+
     const data = new Date().toISOString();
 
     await admin.firestore().collection("estudos_biblicos").add({
-      titulo: tituloOriginal,
+      titulo,
       tema,
-      conteudo: paragrafos,       // compatível com estudos antigos
-      paragrafos,                 // novo campo, mais explícito
+      paragrafos, // apenas este campo agora
       criadoEm: admin.firestore.FieldValue.serverTimestamp(),
       urlOriginal: url,
       dataPublicacao: data,
     });
 
-    return res.status(200).json({
-      success: true,
-      titulo: tituloOriginal,
-      tema,
-      paragrafos,
-    });
+    return res.status(200).json({ success: true, titulo, tema, paragrafos });
   } catch (error) {
     console.error("❌ Erro ao extrair estudo:", error);
     return res.status(500).json({ error: "Erro ao processar o estudo." });
