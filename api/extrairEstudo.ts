@@ -62,9 +62,10 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
         if (
           src &&
           !src.includes("svg") &&
-          !src.toLowerCase().includes("autor")
+          !src.toLowerCase().includes("autor") &&
+          !src.toLowerCase().includes("redacao") &&
+          !el.className?.toLowerCase().includes("avatar")
         ) {
-          console.log("📸 IMG SRC:", src);
           paragrafos.push(src);
         }
       }
@@ -77,9 +78,10 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
         if (
           src &&
           !src.includes("svg") &&
-          !src.toLowerCase().includes("autor")
+          !src.toLowerCase().includes("autor") &&
+          !src.toLowerCase().includes("redacao") &&
+          !el.className?.toLowerCase().includes("avatar")
         ) {
-          console.log("📸 FIGURE SRC:", src);
           paragrafos.push(src);
         }
       }
