@@ -17,7 +17,9 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
   const { url, tema: temaEnviado } = req.body;
 
   if (!url || !url.includes("bibliotecadopregador.com.br")) {
-    return res.status(400).json({ error: "URL inválida ou fora do domínio suportado." });
+    return res
+      .status(400)
+      .json({ error: "URL inválida ou fora do domínio suportado." });
   }
 
   try {
@@ -27,7 +29,8 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
     const doc = dom.window.document;
 
     const titulo =
-      doc.querySelector("h1.entry-title")?.textContent?.trim() || "Estudo Sem Título";
+      doc.querySelector("h1.entry-title")?.textContent?.trim() ||
+      "Estudo Sem Título";
 
     const container =
       doc.querySelector("#the-post") ||
@@ -68,7 +71,8 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
 
       if (tag === "figure") {
         const img = el.querySelector("img");
-        const rawSrc = img?.getAttribute("data-src") || img?.getAttribute("src");
+        const rawSrc =
+          img?.getAttribute("data-src") || img?.getAttribute("src");
         const src = rawSrc ? completarUrl(rawSrc, url) : "";
         if (
           src &&
@@ -82,7 +86,10 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
     });
 
     const unicos = [...new Set(paragrafos)];
-    if (unicos.length > 0 && unicos[0].toLowerCase().includes(titulo.toLowerCase())) {
+    if (
+      unicos.length > 0 &&
+      unicos[0].toLowerCase().includes(titulo.toLowerCase())
+    ) {
       unicos.shift();
     }
 
@@ -97,8 +104,9 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
       // Detecta e destaca subtítulos prováveis
       const eSubtitulo =
         texto.length < 100 &&
-        /^[A-ZÀ-Ú]/.test(texto) &&
-        /[?:.!]$/.test(texto);
+        !texto.startsWith("http") &&
+        (/^[A-ZÀ-Ú]/.test(texto) || // começa com letra maiúscula
+          /^\d+[\.\-:]\s?[A-ZÀ-Ú]/.test(texto)); // ou começa com "1. " ou "1- " etc.
 
       if (eSubtitulo) {
         texto = `**${texto}**`;
@@ -125,7 +133,9 @@ export async function extrairEstudoHandler(req: Request, res: Response) {
       dataPublicacao: new Date().toISOString(),
     });
 
-    return res.status(200).json({ success: true, titulo, tema, paragrafos: paragrafosTratados });
+    return res
+      .status(200)
+      .json({ success: true, titulo, tema, paragrafos: paragrafosTratados });
   } catch (error) {
     console.error("❌ Erro ao extrair estudo:", error);
     return res.status(500).json({ error: "Erro ao processar o estudo." });
