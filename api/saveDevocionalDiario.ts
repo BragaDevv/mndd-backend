@@ -1,59 +1,59 @@
 import { OpenAI } from "openai";
-import fetch from "node-fetch";
-import { htmlToText } from "html-to-text";
-import { JSDOM } from "jsdom";
 import admin from "firebase-admin";
 
 export const salvarDevocionalDiario = async () => {
   try {
-    // 1. Buscar HTML
-    const response = await fetch(
-      "https://bibliotecadopregador.com.br/devocional-diario"
-    );
-    const html = await response.text();
-    const dom = new JSDOM(html);
-    const doc = dom.window.document;
-
-    // 2. Extrair apenas o conteúdo da div principal
-    const conteudo = doc.querySelector(".caixa-devocional")?.innerHTML || "";
-    const textoLimpo = htmlToText(conteudo, {
-      wordwrap: false,
-      selectors: [
-        { selector: "a", format: "skip" },
-        { selector: "img", format: "skip" },
-        { selector: "button", format: "skip" },
-        { selector: "nav", format: "skip" },
-      ],
+    // 1. Obter dia da semana em pt-BR com timeZone correto
+    const formatter = new Intl.DateTimeFormat("pt-BR", {
+      weekday: "long",
+      timeZone: "America/Sao_Paulo",
     });
+    const diaSemana = formatter.format(new Date()).toLowerCase(); // ex: "terça-feira"
 
-    const textoLimitado = textoLimpo.slice(0, 4000);
+    // 2. Tabela segura de temas por dia da semana
+    const temasPorDia: { [key: string]: string } = {
+      domingo: "Adoração",
+      "segunda-feira": "Fé",
+      "terça-feira": "Família",
+      "quarta-feira": "Oração",
+      "quinta-feira": "Propósito",
+      "sexta-feira": "Santidade e Obediência",
+      sábado: "Descanso e Confiança",
+    };
 
-    // 3. Enviar para OpenAI
+    // 3. Tema baseado no dia
+    const tema = temasPorDia[diaSemana] || "Vida Cristã";
+
+    // 3. Gerar devocional com IA
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const completion = await openai.chat.completions.create({
       model: "gpt-4",
+      temperature: 0.9,
       messages: [
         {
           role: "system",
-          content: `Você é um assistente devocional cristão. Com base no conteúdo fornecido, extraia:
-1. Um título curto,
-2. A referência bíblica principal (ex: João 3:16),
-3. Um devocional com no máximo 4 parágrafos curtosy.
-Responda em JSON no formato: { titulo, referencia, paragrafos }`,
+          content: `Você é um assistente devocional cristão. Crie um devocional original e inspirador com base no tema do dia.
+
+Use esse formato:
+- Um título curto,
+- Uma referência bíblica real (ex: João 3:16),
+- Um devocional com até 4 parágrafos curtos e práticos.
+
+Escreva para cristãos de todas as idades. Tema do dia: ${tema}.
+Responda apenas no formato JSON: { titulo, referencia, paragrafos }`,
         },
         {
           role: "user",
-          content: textoLimitado,
+          content: "Crie o devocional do dia de hoje.",
         },
       ],
-      temperature: 0.7,
     });
 
     const resultado = completion.choices[0].message?.content || "";
     const json = JSON.parse(resultado);
 
-    // 4. Corrigir data para o horário de Brasília
-    const hoje = new Date()
+    // 4. Formatar data como yyyy-mm-dd
+    const dataFormatada = new Date()
       .toLocaleDateString("pt-BR", {
         timeZone: "America/Sao_Paulo",
       })
@@ -66,12 +66,13 @@ Responda em JSON no formato: { titulo, referencia, paragrafos }`,
       .doc("hoje")
       .set({
         ...json,
+        tema,
         criadoEm: admin.firestore.FieldValue.serverTimestamp(),
-        data: hoje,
+        data: dataFormatada,
       });
 
-    console.log("✅ Devocional diário salvo com sucesso.");
+    console.log(`✅ Devocional do tema "${tema}" salvo com sucesso.`);
   } catch (error) {
-    console.error("❌ Erro ao salvar devocional diário:", error);
+    console.error("❌ Erro ao gerar devocional diário:", error);
   }
 };
