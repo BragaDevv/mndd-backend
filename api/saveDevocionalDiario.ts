@@ -7,7 +7,9 @@ import admin from "firebase-admin";
 export const salvarDevocionalDiario = async () => {
   try {
     // 1. Buscar HTML
-    const response = await fetch("https://bibliotecadopregador.com.br/devocional-diario");
+    const response = await fetch(
+      "https://bibliotecadopregador.com.br/devocional-diario"
+    );
     const html = await response.text();
     const dom = new JSDOM(html);
     const doc = dom.window.document;
@@ -36,7 +38,7 @@ export const salvarDevocionalDiario = async () => {
           content: `Você é um assistente devocional cristão. Com base no conteúdo fornecido, extraia:
 1. Um título curto,
 2. A referência bíblica principal (ex: João 3:16),
-3. Um devocional com no máximo 4 parágrafos curtos.
+3. Um devocional com no máximo 4 parágrafos curtosy.
 Responda em JSON no formato: { titulo, referencia, paragrafos }`,
         },
         {
@@ -51,16 +53,22 @@ Responda em JSON no formato: { titulo, referencia, paragrafos }`,
     const json = JSON.parse(resultado);
 
     // 4. Corrigir data para o horário de Brasília
-    const hoje = new Date().toLocaleDateString("pt-BR", {
-      timeZone: "America/Sao_Paulo",
-    }).replace(/(\d{2})\/(\d{2})\/(\d{4})/, "$3-$2-$1");
+    const hoje = new Date()
+      .toLocaleDateString("pt-BR", {
+        timeZone: "America/Sao_Paulo",
+      })
+      .replace(/(\d{2})\/(\d{2})\/(\d{4})/, "$3-$2-$1");
 
     // 5. Salvar no Firestore
-    await admin.firestore().collection("devocional_diario").doc("hoje").set({
-      ...json,
-      criadoEm: admin.firestore.FieldValue.serverTimestamp(),
-      data: hoje,
-    });
+    await admin
+      .firestore()
+      .collection("devocional_diario")
+      .doc("hoje")
+      .set({
+        ...json,
+        criadoEm: admin.firestore.FieldValue.serverTimestamp(),
+        data: hoje,
+      });
 
     console.log("✅ Devocional diário salvo com sucesso.");
   } catch (error) {
