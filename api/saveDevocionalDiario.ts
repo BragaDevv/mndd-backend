@@ -8,7 +8,9 @@ import admin from "firebase-admin";
 export const salvarDevocionalDiario = async () => {
   try {
     // 1. Buscar o HTML do Pão Diário
-    const response = await fetch("https://ministeriospaodiario.com.br/devocional");
+    const response = await fetch(
+      "https://bibliotecadopregador.com.br/devocional-diario"
+    );
     const html = await response.text();
 
     // 2. Limpar HTML
@@ -33,8 +35,6 @@ export const salvarDevocionalDiario = async () => {
 1. Um título curto,
 2. A referência bíblica principal,
 3. Um devocional com no máximo 4 parágrafos curtos.
-4. Não inclua o testemunho de alguém, caso tenha no texto.
-5. No final, inclua referências bíblicas que façam sentido com o Devocional.
 Responda em JSON no formato: { titulo, referencia, paragrafos }`,
         },
         {
@@ -50,11 +50,15 @@ Responda em JSON no formato: { titulo, referencia, paragrafos }`,
     // 4. Salvar no Firestore (coleção: devocional_diario, doc: hoje)
     const hoje = new Date().toISOString().split("T")[0]; // Ex: 2025-07-09
 
-    await admin.firestore().collection("devocional_diario").doc("hoje").set({
-      ...json,
-      criadoEm: admin.firestore.FieldValue.serverTimestamp(),
-      data: hoje,
-    });
+    await admin
+      .firestore()
+      .collection("devocional_diario")
+      .doc("hoje")
+      .set({
+        ...json,
+        criadoEm: admin.firestore.FieldValue.serverTimestamp(),
+        data: hoje,
+      });
 
     console.log("✅ Devocional diário salvo com sucesso.");
   } catch (error) {
