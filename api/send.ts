@@ -148,6 +148,7 @@ app.get("/ranking/check", rankingHandler);
 
 // ✅ ROTA Estudo
 app.post("/api/extrair-estudo", extrairEstudoHandler);
+app.get("/api/extrair-estudo", extrairEstudoHandler); // ✅ adiciona suporte a GET
 
 
 // ✅ ROTA Devocional IA
