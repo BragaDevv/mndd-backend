@@ -14,7 +14,8 @@ function completarUrl(src: string, baseUrl: string): string {
 }
 
 export async function extrairEstudoHandler(req: Request, res: Response) {
-  const { url, tema: temaEnviado } = req.body;
+  const url = req.body?.url || req.query.url;
+  const temaEnviado = req.body?.tema || req.query.tema;
 
   if (!url || !url.includes("bibliotecadopregador.com.br")) {
     return res
