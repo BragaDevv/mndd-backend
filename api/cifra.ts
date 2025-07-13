@@ -4,21 +4,23 @@ import * as cheerio from "cheerio";
 import admin from "firebase-admin";
 
 export default async function cifraHandler(req: Request, res: Response) {
-  // ✅ GET → Listar cifras salvas por UID
+  // ✅ GET → Listar todas as cifras (uid é opcional)
   if (req.method === "GET") {
     const { uid } = req.query;
 
-    if (!uid || typeof uid !== "string") {
-      return res.status(400).json({ erro: "UID ausente ou inválido." });
-    }
-
     try {
-      const snapshot = await admin
-        .firestore()
-        .collection("cifras_salvas")
-        .where("uid", "==", uid)
-        .orderBy("criadoEm", "desc")
-        .get();
+      const queryRef = admin.firestore().collection("cifras_salvas");
+
+      let snapshot;
+
+      if (uid && typeof uid === "string") {
+        snapshot = await queryRef
+          .where("uid", "==", uid)
+          .orderBy("criadoEm", "desc")
+          .get();
+      } else {
+        snapshot = await queryRef.orderBy("criadoEm", "desc").get();
+      }
 
       const cifras = snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -32,12 +34,12 @@ export default async function cifraHandler(req: Request, res: Response) {
     }
   }
 
-  // ✅ POST → Salvar nova cifra com numeração global
+  // ✅ POST → Salvar nova cifra com numeração global (uid é opcional)
   if (req.method === "POST") {
     const { url, uid } = req.body;
 
-    if (!url || !uid) {
-      return res.status(400).json({ erro: "URL ou UID ausente." });
+    if (!url) {
+      return res.status(400).json({ erro: "URL da cifra ausente." });
     }
 
     try {
@@ -54,19 +56,22 @@ export default async function cifraHandler(req: Request, res: Response) {
         return res.status(400).json({ erro: "Não foi possível extrair a cifra." });
       }
 
-      // 🔢 Buscar número global da próxima cifra
+      // 🔢 Gerar número global da cifra
       const snapshot = await admin.firestore().collection("cifras_salvas").get();
       const numero = snapshot.size + 1;
       const numeroFormatado = String(numero).padStart(3, "0");
       const titulo = `${numeroFormatado} - ${tituloOriginal}`;
 
-      const docRef = await admin.firestore().collection("cifras_salvas").add({
-        uid,
+      const novaCifra: any = {
         urlOriginal: url,
         titulo,
         cifra,
         criadoEm: new Date(),
-      });
+      };
+
+      if (uid) novaCifra.uid = uid;
+
+      const docRef = await admin.firestore().collection("cifras_salvas").add(novaCifra);
 
       return res.status(200).json({ sucesso: true, id: docRef.id, titulo });
     } catch (err) {
@@ -99,24 +104,23 @@ export default async function cifraHandler(req: Request, res: Response) {
     }
   }
 
-  // ✅ DELETE → Remover cifra por ID
-if (req.method === "DELETE") {
-  const { id } = req.query;
+  // ✅ DELETE → Remover cifra por ID (sem exigir uid)
+  if (req.method === "DELETE") {
+    const { id } = req.query;
 
-  if (!id || typeof id !== "string") {
-    return res.status(400).json({ erro: "ID ausente ou inválido." });
+    if (!id || typeof id !== "string") {
+      return res.status(400).json({ erro: "ID ausente ou inválido." });
+    }
+
+    try {
+      await admin.firestore().collection("cifras_salvas").doc(id).delete();
+      return res.status(200).json({ sucesso: true });
+    } catch (error) {
+      console.error("Erro ao excluir cifra:", error);
+      return res.status(500).json({ erro: "Erro ao excluir a cifra." });
+    }
   }
 
-  try {
-    await admin.firestore().collection("cifras_salvas").doc(id).delete();
-    return res.status(200).json({ sucesso: true });
-  } catch (error) {
-    console.error("Erro ao excluir cifra:", error);
-    return res.status(500).json({ erro: "Erro ao excluir a cifra." });
-  }
-}
-
-
-  // ⛔ Outros métodos não permitidos
+  // ⛔ Método não permitido
   return res.status(405).send("Método não permitido.");
 }
