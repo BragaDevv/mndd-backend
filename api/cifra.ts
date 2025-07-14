@@ -53,11 +53,16 @@ export default async function cifraHandler(req: Request, res: Response) {
       const cifra = $(".cifra_cnt").text().trim();
 
       if (!tituloOriginal || !cifra) {
-        return res.status(400).json({ erro: "Não foi possível extrair a cifra." });
+        return res
+          .status(400)
+          .json({ erro: "Não foi possível extrair a cifra." });
       }
 
       // 🔢 Gerar número global da cifra
-      const snapshot = await admin.firestore().collection("cifras_salvas").get();
+      const snapshot = await admin
+        .firestore()
+        .collection("cifras_salvas")
+        .get();
       const numero = snapshot.size + 1;
       const numeroFormatado = String(numero).padStart(3, "0");
       const titulo = `${numeroFormatado} - ${tituloOriginal}`;
@@ -71,35 +76,45 @@ export default async function cifraHandler(req: Request, res: Response) {
 
       if (uid) novaCifra.uid = uid;
 
-      const docRef = await admin.firestore().collection("cifras_salvas").add(novaCifra);
+      const docRef = await admin
+        .firestore()
+        .collection("cifras_salvas")
+        .add(novaCifra);
 
       return res.status(200).json({ sucesso: true, id: docRef.id, titulo });
     } catch (err) {
       console.error("Erro ao salvar cifra:", err);
-      return res.status(500).json({ erro: "Erro ao extrair ou salvar a cifra." });
+      return res
+        .status(500)
+        .json({ erro: "Erro ao extrair ou salvar a cifra." });
     }
   }
 
-  // ✅ PATCH → Atualizar título da cifra
+  // ✅ PATCH → Atualizar cifra e/ou título
   if (req.method === "PATCH") {
     const { id } = req.query;
-    const { titulo } = req.body;
+    const { titulo, cifra } = req.body;
 
     if (!id || typeof id !== "string") {
       return res.status(400).json({ erro: "ID da cifra ausente ou inválido." });
     }
 
-    if (!titulo || typeof titulo !== "string") {
-      return res.status(400).json({ erro: "Título ausente ou inválido." });
+    const dadosParaAtualizar: any = {};
+    if (titulo && typeof titulo === "string")
+      dadosParaAtualizar.titulo = titulo;
+    if (cifra && typeof cifra === "string") dadosParaAtualizar.cifra = cifra;
+
+    if (Object.keys(dadosParaAtualizar).length === 0) {
+      return res.status(400).json({ erro: "Nada para atualizar." });
     }
 
     try {
       const docRef = admin.firestore().collection("cifras_salvas").doc(id);
-      await docRef.update({ titulo });
+      await docRef.update(dadosParaAtualizar);
 
       return res.status(200).json({ sucesso: true });
     } catch (error) {
-      console.error("Erro ao atualizar título da cifra:", error);
+      console.error("Erro ao atualizar cifra:", error);
       return res.status(500).json({ erro: "Erro ao atualizar a cifra." });
     }
   }
