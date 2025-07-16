@@ -18,9 +18,6 @@ import { salvarDevocionalDiario } from "./saveDevocionalDiario";
 import { extrairEstudoHandler } from "./extrairEstudo";
 import aniversariantesHandler from "./aniversariantes";
 
-
-
-
 dotenv.config();
 
 const app = express();
@@ -154,7 +151,6 @@ app.get("/ranking/check", rankingHandler);
 app.post("/api/extrair-estudo", extrairEstudoHandler);
 app.get("/api/extrair-estudo", extrairEstudoHandler); // ✅ adiciona suporte a GET
 
-
 // ✅ ROTA Devocional IA
 app.get("/api/devocional/criar", async (_req, res) => {
   try {
@@ -174,7 +170,20 @@ cron.schedule("0 9 * * *", async () => {
 
 //ROTA Aniversário
 app.post("/aniversariantes", aniversariantesHandler);
+// 🎉 Agendar envio de notificações de aniversariantes às 12h (horário de Brasília)
+cron.schedule("0 15 * * *", async () => {
+  console.log("⏰ Rodando tarefa de aniversariantes do dia");
 
+  try {
+    await fetch("https://mndd-backend.onrender.com/aniversariantes", {
+      method: "POST",
+    });
+
+    console.log("✅ Notificações de aniversário enviadas.");
+  } catch (error) {
+    console.error("❌ Erro ao enviar notificações de aniversário:", error);
+  }
+});
 
 // ✅ ROTA auxiliar para forçar a checagem externa
 app.get("/checar", async (_req, res) => {
