@@ -7,67 +7,111 @@ export default async function handler(req: Request, res: Response) {
     return res.status(405).json({ error: "Método não permitido" });
   }
 
-  const modoTeste = req.query.teste === "true"; // ou via body
+  const modoTeste = req.query.teste?.toString() === "true";
 
   try {
     const snapshot = await admin.firestore().collection("usuarios").get();
+
     const hoje = new Date();
     const diaHoje = String(hoje.getDate()).padStart(2, "0");
     const mesHoje = String(hoje.getMonth() + 1).padStart(2, "0");
 
-    const aniversariantes: any[] = [];
+    const aniversariantes: { nome: string; token: string; id: string }[] = [];
+    const todosTokens: { token: string; id: string }[] = [];
 
     for (const doc of snapshot.docs) {
       const data = doc.data();
+      const id = doc.id;
       const dataNascimento = data.dataNascimento;
+      const token = data.expoToken;
+      const nome = data.nome || "Irmão(a)";
 
-      if (typeof dataNascimento === "string" && dataNascimento.includes("/")) {
+      if (typeof token === "string" && token.startsWith("ExponentPushToken")) {
+        todosTokens.push({ token, id });
+      }
+
+      if (
+        typeof dataNascimento === "string" &&
+        typeof token === "string" &&
+        dataNascimento.includes("/")
+      ) {
         const [dia, mes] = dataNascimento.split("/");
-
         if (dia === diaHoje && mes === mesHoje) {
-          aniversariantes.push({
-            nome: data.nome,
-            token: data.expoToken,
-            dataNascimento,
-          });
-
-          if (!modoTeste) {
-            const token = data.expoToken;
-            if (
-              typeof token === "string" &&
-              token.startsWith("ExponentPushToken")
-            ) {
-              await fetch("https://exp.host/--/api/v2/push/send", {
-                method: "POST",
-                headers: {
-                  Accept: "application/json",
-                  "Accept-encoding": "gzip, deflate",
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  to: token,
-                  sound: "default",
-                  title: "🎉 Feliz Aniversário!",
-                  body: `Deus te abençoe, ${data.nome || "Irmão(a)"}! 🙌🎂`,
-                }),
-              });
-            }
-          }
+          aniversariantes.push({ nome, token, id });
         }
       }
+    }
+
+    const enviados = {
+      aniversariantes: 0,
+      paraTodos: 0,
+    };
+
+    // 1. Enviar notificação personalizada para cada aniversariante
+    for (const user of aniversariantes) {
+      if (!modoTeste) {
+        await fetch("https://exp.host/--/api/v2/push/send", {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Accept-encoding": "gzip, deflate",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            to: user.token,
+            sound: "default",
+            title: "🎉 Feliz aniversário!",
+            body: `Que Deus abençoe seu dia, ${user.nome}! 🙌🎂`,
+          }),
+        });
+      }
+      enviados.aniversariantes++;
+    }
+
+    // 2. Enviar notificação para todos os tokens com base na quantidade
+    for (const user of todosTokens) {
+      if (!modoTeste) {
+        const message =
+          aniversariantes.length === 1
+            ? {
+                title: "🎉 Parabénssss !",
+                body: `Hoje é dia dele, ${aniversariantes[0].nome}! 🎂`,
+              }
+            : {
+                title: "🎉 Feliz aniversário!",
+                body: "Acesse o app e veja quem está celebrando hoje! 🎂",
+              };
+
+        await fetch("https://exp.host/--/api/v2/push/send", {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Accept-encoding": "gzip, deflate",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            to: user.token,
+            sound: "default",
+            title: message.title,
+            body: message.body,
+          }),
+        });
+      }
+      enviados.paraTodos++;
     }
 
     return res.status(200).json({
       success: true,
       modoTeste,
-      aniversariantes,
+      totalAniversariantes: aniversariantes.length,
+      enviados,
       message: modoTeste
-        ? "Teste: aniversariantes identificados com sucesso."
-        : `Notificações enviadas para ${aniversariantes.length} aniversariante(s).`,
+        ? "Modo teste: tokens identificados."
+        : "Notificações enviadas com sucesso.",
     });
   } catch (error) {
-    console.error("Erro:", error);
     const msg = error instanceof Error ? error.message : "Erro desconhecido";
+    console.error("Erro ao enviar notificações:", msg);
     return res.status(500).json({ success: false, error: msg });
   }
 }
