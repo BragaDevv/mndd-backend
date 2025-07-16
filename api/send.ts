@@ -16,6 +16,10 @@ import cultosAvisoHandler from "./cultosAviso";
 import cifraHandler from "./cifra";
 import { salvarDevocionalDiario } from "./saveDevocionalDiario";
 import { extrairEstudoHandler } from "./extrairEstudo";
+import aniversariantesHandler from "./aniversariantes";
+
+
+
 
 dotenv.config();
 
@@ -167,6 +171,9 @@ cron.schedule("0 9 * * *", async () => {
   console.log("⏰ Rodando tarefa de devocional diário");
   await salvarDevocionalDiario();
 });
+
+//ROTA Aniversário
+app.post("/aniversariantes", aniversariantesHandler);
 
 
 // ✅ ROTA auxiliar para forçar a checagem externa
