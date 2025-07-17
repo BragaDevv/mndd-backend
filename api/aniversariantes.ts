@@ -42,6 +42,14 @@ export default async function handler(req: Request, res: Response) {
       }
     }
 
+    console.log("🎯 Total de aniversariantes do dia:", aniversariantes.length);
+    if (aniversariantes.length === 0) {
+      console.log("✅ Nenhum aniversariante encontrado hoje.");
+    } else {
+      console.log("🎉 Aniversariantes de hoje:", aniversariantes.map(u => u.nome).join(", "));
+    }
+
+
     const enviados = {
       aniversariantes: 0,
       paraTodos: 0,
@@ -69,36 +77,39 @@ export default async function handler(req: Request, res: Response) {
     }
 
     // 2. Enviar notificação para todos os tokens com base na quantidade
-    for (const user of todosTokens) {
-      if (!modoTeste) {
-        const message =
-          aniversariantes.length === 1
-            ? {
+    if (aniversariantes.length > 0) {
+      for (const user of todosTokens) {
+        if (!modoTeste) {
+          const message =
+            aniversariantes.length === 1
+              ? {
                 title: "🎉 Parabénssss !",
                 body: `Hoje é dia dele, ${aniversariantes[0].nome}! 🎂`,
               }
-            : {
+              : {
                 title: "🎉 Feliz aniversário!",
                 body: "Acesse o app e veja quem está celebrando hoje! 🎂",
               };
 
-        await fetch("https://exp.host/--/api/v2/push/send", {
-          method: "POST",
-          headers: {
-            Accept: "application/json",
-            "Accept-encoding": "gzip, deflate",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            to: user.token,
-            sound: "default",
-            title: message.title,
-            body: message.body,
-          }),
-        });
+          await fetch("https://exp.host/--/api/v2/push/send", {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              "Accept-encoding": "gzip, deflate",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              to: user.token,
+              sound: "default",
+              title: message.title,
+              body: message.body,
+            }),
+          });
+        }
+        enviados.paraTodos++;
       }
-      enviados.paraTodos++;
     }
+
 
     return res.status(200).json({
       success: true,
