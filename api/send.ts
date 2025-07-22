@@ -17,6 +17,8 @@ import cifraHandler from "./cifra";
 import { salvarDevocionalDiario } from "./saveDevocionalDiario";
 import { extrairEstudoHandler } from "./extrairEstudo";
 import aniversariantesHandler from "./aniversariantes";
+import redefinirSenhaHandler from "./redefinirSenha";
+
 
 dotenv.config();
 
@@ -173,6 +175,10 @@ app.post("/aniversariantes", aniversariantesHandler);
 // 🎉 Agendar envio de notificações de aniversariantes às 12h (horário de Brasília)
 cron.schedule("0 15 * * *", async () => {
   console.log("⏰ Rodando tarefa de aniversariantes do dia");
+
+  //
+  app.post("/redefinir-senha", redefinirSenhaHandler);
+
 
   try {
     await fetch("https://mndd-backend.onrender.com/aniversariantes", {
