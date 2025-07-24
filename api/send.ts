@@ -176,7 +176,7 @@ cron.schedule("0 9 * * *", async () => {
 //ROTA Aniversário
 app.post("/aniversariantes", aniversariantesHandler);
 // 🎉 Agendar envio de notificações de aniversariantes às 12h (horário de Brasília)
-cron.schedule("0 15 * * *", async () => {
+cron.schedule("0 13 * * *", async () => {
   console.log("⏰ Rodando tarefa de aniversariantes do dia");
   try {
     await fetch("https://mndd-backend.onrender.com/aniversariantes", {
@@ -188,6 +188,21 @@ cron.schedule("0 15 * * *", async () => {
     console.error("❌ Erro ao enviar notificações de aniversário:", error);
   }
 });
+
+// 🏆 Agendamento diário da verificação do ranking às 12h (Brasília)
+cron.schedule("0 15 * * *", async () => {
+  console.log("⏰ Rodando tarefa de checagem de ranking...");
+
+  try {
+    const response = await fetch("https://mndd-backend.onrender.com/ranking/check");
+    const data = await response.text();
+
+    console.log("✅ Resultado da execução do ranking:", data);
+  } catch (error) {
+    console.error("❌ Erro ao executar checagem de ranking:", error);
+  }
+});
+
 
 // ✅ ROTA auxiliar para forçar a checagem externa
 app.get("/checar", async (_req, res) => {
