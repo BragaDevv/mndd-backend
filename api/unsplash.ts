@@ -1,42 +1,25 @@
 import { Request, Response } from "express";
-import fetch from "node-fetch";
 
 export default async function unsplashHandler(req: Request, res: Response) {
-    try {
-        const accessKey = process.env.UNSPLASH_ACCESS_KEY;
+  try {
+    // Temas verticais pré-definidos
+    const temas = ["blue sky", "starry sky", "orange sky"];
+    const temaAleatorio = temas[Math.floor(Math.random() * temas.length)];
 
-        // Temas fixos
-        const temas = ["blue sky", "starry sky", "orange sky"];
-        const temaAleatorio = temas[Math.floor(Math.random() * temas.length)];
+    // Use um tamanho vertical comum de celular: retrato
+    const width = 1080;
+    const height = 1920;
 
-        const response = await fetch(
-            `https://api.unsplash.com/photos/random?query=${encodeURIComponent(
-                temaAleatorio
-            )}&orientation=portrait&client_id=${accessKey}`
-        );
+    // Formata tema para URL (ex: "starry sky" → "starry+sky")
+    const temaFormatado = encodeURIComponent(temaAleatorio);
+    const url = `https://source.unsplash.com/${width}x${height}/?${temaFormatado}`;
 
-        if(!response.ok) {
-            const erroTexto = await response.text();
-            console.error("🔴 Detalhes do erro do Unsplash:", erroTexto);
-            throw new Error("Erro na requisição à API do Unsplash");
-        }
-
-
-        const data = await response.json() as {
-            urls: { full: string; regular: string };
-            user?: { name?: string };
-            description?: string;
-            alt_description?: string;
-        };
-
-        res.status(200).json({
-            url: data.urls.full,
-            autor: data.user?.name,
-            descricao: data.description || data.alt_description,
-            tema: temaAleatorio,
-        });
-    } catch (err) {
-        console.error("❌ Erro ao buscar imagem do Unsplash:", err);
-        res.status(500).json({ erro: "Erro ao buscar imagem do Unsplash" });
-    }
+    res.status(200).json({
+      url,
+      tema: temaAleatorio,
+    });
+  } catch (err) {
+    console.error("❌ Erro ao gerar imagem aleatória:", err);
+    res.status(500).json({ erro: "Erro ao gerar imagem de fundo" });
+  }
 }
