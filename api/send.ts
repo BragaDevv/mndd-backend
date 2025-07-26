@@ -18,7 +18,7 @@ import { salvarDevocionalDiario } from "./saveDevocionalDiario";
 import { extrairEstudoHandler } from "./extrairEstudo";
 import aniversariantesHandler from "./aniversariantes";
 import redefinirSenhaHandler from "./redefinirSenha";
-
+import unsplashHandler from "./unsplash";
 
 dotenv.config();
 
@@ -151,6 +151,9 @@ app.all("/cifras", cifraHandler); // cuida de GET e POST (mais flexível)
 
 // ✅ ROTA Ranking
 app.get("/ranking/check", rankingHandler);
+
+// ✅ ROTA IMAGENS ALEATORIAS
+app.get("/api/fundo-aleatorio", unsplashHandler);
 
 // ✅ ROTA Estudo
 app.post("/api/extrair-estudo", extrairEstudoHandler);
