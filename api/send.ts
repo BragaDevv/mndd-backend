@@ -19,6 +19,7 @@ import { extrairEstudoHandler } from "./extrairEstudo";
 import aniversariantesHandler from "./aniversariantes";
 import redefinirSenhaHandler from "./redefinirSenha";
 import unsplashHandler from "./unsplash";
+import { upload, uploadEstudoPDFHandler } from "./uploadEstudoPDF";
 
 dotenv.config();
 
@@ -154,6 +155,9 @@ app.get("/ranking/check", rankingHandler);
 
 // ✅ ROTA IMAGENS ALEATORIAS
 app.get("/api/fundo-aleatorio", unsplashHandler);
+
+// ✅ ROTA Estudo PDF
+app.post("/api/upload-estudo-pdf", upload, uploadEstudoPDFHandler);
 
 // ✅ ROTA Estudo
 app.post("/api/extrair-estudo", extrairEstudoHandler);
