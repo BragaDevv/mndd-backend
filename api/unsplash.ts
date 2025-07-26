@@ -16,6 +16,7 @@ export default async function unsplashHandler(req: Request, res: Response) {
     });
 
     const finalUrl = response.url;
+    console.log("🌤 URL Final:", finalUrl);
 
     res.status(200).json({
       url: finalUrl,
