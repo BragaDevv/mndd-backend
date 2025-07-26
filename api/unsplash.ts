@@ -9,16 +9,17 @@ export default async function unsplashHandler(req: Request, res: Response) {
 
     const urlSource = `https://source.unsplash.com/1080x1920/?${temaFormatado}`;
 
-    // Pega o HEAD apenas para seguir o redirecionamento
+    // Faz o fetch normal com redirect automático
     const response = await fetch(urlSource, {
-      method: "HEAD", // <- importante: HEAD evita baixar a imagem inteira
-      redirect: "manual", // <- precisamos capturar o redirecionamento
+      method: "GET",
+      redirect: "follow",
     });
 
-    const finalUrl = response.headers.get("location");
+    // Aqui, o response.url já será a URL final da imagem
+    const finalUrl = response.url;
 
-    if (!finalUrl) {
-      throw new Error("Não foi possível obter a imagem final.");
+    if (!finalUrl || finalUrl.includes("source.unsplash.com")) {
+      throw new Error("URL final inválida");
     }
 
     res.status(200).json({
