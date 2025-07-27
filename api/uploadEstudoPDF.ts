@@ -8,14 +8,16 @@ import FormData from "form-data";
 const storage = multer.memoryStorage();
 export const upload = multer({ storage }).single("pdf");
 
-// Função para enviar para Cloudinary
+// 🔧 Função para enviar para Cloudinary como PDF acessível
 async function uploadPdfToCloudinary(buffer: Buffer, filename: string): Promise<string> {
   const formData = new FormData();
   formData.append("file", buffer, filename);
   formData.append("upload_preset", "mndd_unsigned");
   formData.append("folder", "estudos_pdf");
+  formData.append("resource_type", "raw"); // ✅ define que é um arquivo bruto
+  formData.append("type", "upload");       // ✅ garante que fique público
 
-  const res = await fetch("https://api.cloudinary.com/v1_1/dy48gdjlv/auto/upload", {
+  const res = await fetch("https://api.cloudinary.com/v1_1/dy48gdjlv/raw/upload", {
     method: "POST",
     body: formData as any,
   });
