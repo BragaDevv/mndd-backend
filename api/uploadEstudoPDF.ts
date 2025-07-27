@@ -9,22 +9,16 @@ const storage = multer.memoryStorage();
 export const upload = multer({ storage }).single("pdf");
 
 // Função para enviar para Cloudinary
-async function uploadPdfToCloudinary(
-  buffer: Buffer,
-  filename: string
-): Promise<string> {
+async function uploadPdfToCloudinary(buffer: Buffer, filename: string): Promise<string> {
   const formData = new FormData();
   formData.append("file", buffer, filename);
-  formData.append("upload_preset", "mndd_unsigned"); // seu preset
+  formData.append("upload_preset", "mndd_unsigned");
   formData.append("folder", "estudos_pdf");
 
-  const res = await fetch(
-    "https://api.cloudinary.com/v1_1/dy48gdjlv/raw/upload",
-    {
-      method: "POST",
-      body: formData as any,
-    }
-  );
+  const res = await fetch("https://api.cloudinary.com/v1_1/dy48gdjlv/auto/upload", {
+    method: "POST",
+    body: formData as any,
+  });
 
   const data = (await res.json()) as { secure_url: string };
   return data.secure_url;
