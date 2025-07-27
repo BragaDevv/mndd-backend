@@ -19,7 +19,7 @@ async function uploadPdfToCloudinary(
   formData.append("folder", "estudos_pdf");
 
   const res = await fetch(
-    "https://api.cloudinary.com/v1_1/dy48gdjlv/auto/upload",
+    "https://api.cloudinary.com/v1_1/dy48gdjlv/raw/upload",
     {
       method: "POST",
       body: formData as any,
