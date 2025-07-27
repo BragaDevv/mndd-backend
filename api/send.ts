@@ -19,9 +19,6 @@ import { extrairEstudoHandler } from "./extrairEstudo";
 import aniversariantesHandler from "./aniversariantes";
 import redefinirSenhaHandler from "./redefinirSenha";
 import unsplashHandler from "./unsplash";
-import { uploadEstudoPDFHandler } from "./uploadEstudoPDF";
-import { createRouteHandler } from "uploadthing/express";
-import { uploadRouter } from "./uploadthing";
 
 dotenv.config();
 
@@ -157,10 +154,6 @@ app.get("/ranking/check", rankingHandler);
 
 // ✅ ROTA IMAGENS ALEATORIAS
 app.get("/api/fundo-aleatorio", unsplashHandler);
-
-// ✅ ROTA Estudo PDF
-app.post("/api/upload-estudo-pdf", uploadEstudoPDFHandler);
-app.use("/api/uploadthing", createRouteHandler({ router: uploadRouter }));
 
 // ✅ ROTA Estudo
 app.post("/api/extrair-estudo", extrairEstudoHandler);
