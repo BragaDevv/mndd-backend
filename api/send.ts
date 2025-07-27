@@ -18,7 +18,6 @@ import { salvarDevocionalDiario } from "./saveDevocionalDiario";
 import { extrairEstudoHandler } from "./extrairEstudo";
 import aniversariantesHandler from "./aniversariantes";
 import redefinirSenhaHandler from "./redefinirSenha";
-import unsplashHandler from "./unsplash";
 import pexelsHandler from "./pexels";
 
 
@@ -157,8 +156,6 @@ app.all("/cifras", cifraHandler); // cuida de GET e POST (mais flexível)
 app.get("/ranking/check", rankingHandler);
 
 // ✅ ROTA IMAGENS ALEATORIAS
-app.get("/api/fundo-aleatorio", unsplashHandler);
-//
 app.get("/api/pexels", pexelsHandler);
 
 // ✅ ROTA Estudo
