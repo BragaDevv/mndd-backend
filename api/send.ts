@@ -19,6 +19,8 @@ import { extrairEstudoHandler } from "./extrairEstudo";
 import aniversariantesHandler from "./aniversariantes";
 import redefinirSenhaHandler from "./redefinirSenha";
 import unsplashHandler from "./unsplash";
+import pexelsHandler from "./pexels";
+
 
 dotenv.config();
 console.log("🔐 Unsplash Key:", process.env.UNSPLASH_ACCESS_KEY);
@@ -156,6 +158,8 @@ app.get("/ranking/check", rankingHandler);
 
 // ✅ ROTA IMAGENS ALEATORIAS
 app.get("/api/fundo-aleatorio", unsplashHandler);
+//
+app.get("/api/pexels", pexelsHandler);
 
 // ✅ ROTA Estudo
 app.post("/api/extrair-estudo", extrairEstudoHandler);
