@@ -22,7 +22,7 @@ import pexelsHandler from "./pexels";
 
 
 dotenv.config();
-console.log("🔐 Unsplash Key:", process.env.UNSPLASH_ACCESS_KEY);
+console.log("🔐 Pexels Key:", process.env.PEXELS_API_KEY);
 
 
 const app = express();
