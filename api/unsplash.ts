@@ -2,10 +2,9 @@ import { Request, Response } from "express";
 
 export default function unsplashHandler(req: Request, res: Response) {
     try {
-        const temas = ["blue-sky", "orange-sky", "starry-sky"];
+        const temas = ["sky", "sunset", "stars"];
         const temaAleatorio = temas[Math.floor(Math.random() * temas.length)];
         const seed = encodeURIComponent(temaAleatorio);
-
         const url = `https://picsum.photos/seed/${seed}/1080/1920`;
 
         res.status(200).json({
