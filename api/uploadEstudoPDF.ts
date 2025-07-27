@@ -13,8 +13,7 @@ async function uploadPdfToCloudinary(buffer: Buffer, filename: string): Promise<
   formData.append("file", buffer, filename);
   formData.append("upload_preset", "mndd_unsigned");
   formData.append("folder", "estudos_pdf");
-  formData.append("resource_type", "raw"); // ✅ necessário para PDF
-  formData.append("type", "upload");        // ✅ deixa público
+  formData.append("resource_type", "raw"); // ✅ mantém, pois define que é um arquivo genérico
 
   const response = await fetch("https://api.cloudinary.com/v1_1/dy48gdjlv/raw/upload", {
     method: "POST",
@@ -23,7 +22,6 @@ async function uploadPdfToCloudinary(buffer: Buffer, filename: string): Promise<
 
   const data = (await response.json()) as { secure_url?: string; error?: { message?: string } };
 
-
   if (!response.ok || !data.secure_url) {
     console.error("❌ Erro no Cloudinary:", data);
     throw new Error(data?.error?.message || "Falha ao enviar PDF para o Cloudinary");
@@ -31,6 +29,7 @@ async function uploadPdfToCloudinary(buffer: Buffer, filename: string): Promise<
 
   return data.secure_url;
 }
+
 
 // 📥 Manipulador principal
 export async function uploadEstudoPDFHandler(req: Request, res: Response) {
