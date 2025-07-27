@@ -21,6 +21,8 @@ import redefinirSenhaHandler from "./redefinirSenha";
 import unsplashHandler from "./unsplash";
 
 dotenv.config();
+console.log("🔐 Unsplash Key:", process.env.UNSPLASH_ACCESS_KEY);
+
 
 const app = express();
 app.use(bodyParser.json());
