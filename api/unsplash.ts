@@ -27,9 +27,9 @@ export default async function unsplashHandler(req: Request, res: Response) {
     };
 
     res.status(200).json({
-      imageUrl: data.urls.regular,
-      autor: data.user.name,
-      link: data.links.html,
+      imageUrl: data.urls?.regular || "",
+      autor: data.user?.name || "Desconhecido",
+      link: data.links?.html || "https://unsplash.com",
       tema: temaAleatorio,
     });
   } catch (err) {
