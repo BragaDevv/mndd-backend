@@ -84,7 +84,7 @@ export default async function handler(req: Request, res: Response) {
             aniversariantes.length === 1
               ? {
                 title: "🎉 Parabénssss !",
-                body: `Hoje é dia dele, ${aniversariantes[0].nome}! 🎂`,
+                body: `Hoje é seu dia, ${aniversariantes[0].nome}! 🎂`,
               }
               : {
                 title: "🎉 Feliz aniversário!",
