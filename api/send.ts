@@ -21,6 +21,9 @@ import redefinirSenhaHandler from "./redefinirSenha";
 import pexelsHandler from "./pexels";
 import cortarAssinaturaHandler from "./cortarAssinatura";
 import criarUsuarioHandler from "./criarUsuario";
+import listarUsuariosHandler from "./listarUsuarios";
+import excluirUsuarioHandler from "./excluirUsuario";
+
 
 dotenv.config();
 console.log("🔐 Pexels Key:", process.env.PEXELS_API_KEY);
@@ -140,12 +143,10 @@ app.get("/versiculo-hora", async (_req, res) => {
   }
 });
 
-//
-
-//✅ ROTA para Criar Usuario
+//✅ ROTA Usuario ADM
 app.post("/criar-usuario", criarUsuarioHandler);
-
-// ✅ ROTA para redefinir senha
+app.get("/listar-usuarios", listarUsuariosHandler);
+app.delete("/excluir-usuario", excluirUsuarioHandler);
 app.post("/redefinir-senha", redefinirSenhaHandler);
 
 // ✅ ROTA Notif Cultos
