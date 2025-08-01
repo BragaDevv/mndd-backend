@@ -8,7 +8,7 @@ const PEXELS_API_KEY = process.env.PEXELS_API_KEY;
 
 export default async function pexelsHandler(req: Request, res: Response) {
   try {
-    const temas = ["blue sky", "sunset sky", "starry night", "sky", "God"];
+    const temas = ["blue sky", "sunset sky", "starry night", "sky",];
     const temaAleatorio = temas[Math.floor(Math.random() * temas.length)];
     const perPage = 15;
 
