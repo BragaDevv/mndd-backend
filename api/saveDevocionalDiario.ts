@@ -1,16 +1,15 @@
 import { OpenAI } from "openai";
 import admin from "firebase-admin";
+import fetch from "node-fetch";
 
 export const salvarDevocionalDiario = async () => {
   try {
-    // 1. Obter dia da semana em pt-BR com timeZone correto
     const formatter = new Intl.DateTimeFormat("pt-BR", {
       weekday: "long",
       timeZone: "America/Sao_Paulo",
     });
-    const diaSemana = formatter.format(new Date()).toLowerCase(); // ex: "terça-feira"
+    const diaSemana = formatter.format(new Date()).toLowerCase();
 
-    // 2. Tabela segura de temas por dia da semana
     const temasPorDia: { [key: string]: string } = {
       domingo: "Adoração",
       "segunda-feira": "Fé",
@@ -21,10 +20,8 @@ export const salvarDevocionalDiario = async () => {
       sábado: "Descanso e Confiança",
     };
 
-    // 3. Tema baseado no dia
     const tema = temasPorDia[diaSemana] || "Vida Cristã";
 
-    // 3. Gerar devocional com IA
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const completion = await openai.chat.completions.create({
       model: "gpt-4",
@@ -52,14 +49,12 @@ Responda apenas no formato JSON: { titulo, referencia, paragrafos }`,
     const resultado = completion.choices[0].message?.content || "";
     const json = JSON.parse(resultado);
 
-    // 4. Formatar data como yyyy-mm-dd
     const dataFormatada = new Date()
       .toLocaleDateString("pt-BR", {
         timeZone: "America/Sao_Paulo",
       })
       .replace(/(\d{2})\/(\d{2})\/(\d{4})/, "$3-$2-$1");
 
-    // 5. Salvar no Firestore
     await admin
       .firestore()
       .collection("devocional_diario")
@@ -72,7 +67,44 @@ Responda apenas no formato JSON: { titulo, referencia, paragrafos }`,
       });
 
     console.log(`✅ Devocional do tema "${tema}" salvo com sucesso.`);
+
+    // 🚀 Enviar notificação push com título e primeiro parágrafo
+    const snapshot = await admin.firestore().collection("usuarios").get();
+    const tokens = snapshot.docs
+      .map((doc) => doc.data().expoToken)
+      .filter(
+        (t) => typeof t === "string" && t.startsWith("ExponentPushToken")
+      );
+
+    if (tokens.length === 0) {
+      console.warn(
+        "⚠️ Nenhum token válido encontrado para envio do devocional."
+      );
+      return;
+    }
+
+    const primeiroParagrafo = json.paragrafos[0] || "";
+
+    const messages = tokens.map((token) => ({
+      to: token,
+      sound: "default",
+      title: `📖 Devocional: ${json.titulo}`,
+      body: `${primeiroParagrafo} (${json.referencia})`,
+    }));
+
+    const expoResponse = await fetch("https://exp.host/--/api/v2/push/send", {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Accept-Encoding": "gzip, deflate",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(messages),
+    });
+
+    const expoResult = await expoResponse.json();
+    console.log("📤 Notificação enviada:", expoResult);
   } catch (error) {
-    console.error("❌ Erro ao gerar devocional diário:", error);
+    console.error("❌ Erro ao gerar ou enviar devocional diário:", error);
   }
 };
