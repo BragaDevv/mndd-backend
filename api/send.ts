@@ -20,6 +20,7 @@ import aniversariantesHandler from "./aniversariantes";
 import redefinirSenhaHandler from "./redefinirSenha";
 import pexelsHandler from "./pexels";
 import cortarAssinaturaHandler from "./cortarAssinatura";
+import criarUsuarioHandler from "./criarUsuario";
 
 dotenv.config();
 console.log("🔐 Pexels Key:", process.env.PEXELS_API_KEY);
@@ -138,6 +139,11 @@ app.get("/versiculo-hora", async (_req, res) => {
     return res.status(500).json({ error: "Erro ao buscar horário" });
   }
 });
+
+//
+
+//✅ ROTA para Criar Usuario
+app.post("/criar-usuario", criarUsuarioHandler);
 
 // ✅ ROTA para redefinir senha
 app.post("/redefinir-senha", redefinirSenhaHandler);
