@@ -25,7 +25,7 @@ dotenv.config();
 console.log("🔐 Pexels Key:", process.env.PEXELS_API_KEY);
 
 const app = express();
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: "3mb" }));
 
 // 🔐 Inicialização do Firebase Admin
 const jsonString = process.env.GOOGLE_CREDENTIALS;
