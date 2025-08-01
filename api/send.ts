@@ -19,11 +19,10 @@ import { extrairEstudoHandler } from "./extrairEstudo";
 import aniversariantesHandler from "./aniversariantes";
 import redefinirSenhaHandler from "./redefinirSenha";
 import pexelsHandler from "./pexels";
-
+import cortarAssinaturaHandler from "./cortarAssinatura";
 
 dotenv.config();
 console.log("🔐 Pexels Key:", process.env.PEXELS_API_KEY);
-
 
 const app = express();
 app.use(bodyParser.json());
@@ -157,6 +156,9 @@ app.get("/ranking/check", rankingHandler);
 
 // ✅ ROTA IMAGENS ALEATORIAS
 app.get("/api/pexels", pexelsHandler);
+
+// ✅ ROTA Corte Assinatura
+app.use("/api", cortarAssinaturaHandler);
 
 // ✅ ROTA Estudo
 app.post("/api/extrair-estudo", extrairEstudoHandler);
