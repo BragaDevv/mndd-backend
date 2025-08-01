@@ -12,13 +12,16 @@ export default async function listarUsuariosHandler(req: Request, res: Response)
     const buscarTodos = async (token?: string) => {
       const result = await admin.auth().listUsers(1000, token);
       result.users.forEach((u) => {
-        usuarios.push({
-          uid: u.uid,
-          email: u.email,
-          displayName: u.displayName || "",
-          customClaims: u.customClaims || {},
-        });
+        if (u.email) { // 👈 só inclui quem tem email (ignora anônimos)
+          usuarios.push({
+            uid: u.uid,
+            email: u.email,
+            displayName: u.displayName || "",
+            customClaims: u.customClaims || {},
+          });
+        }
       });
+
       if (result.pageToken) await buscarTodos(result.pageToken);
     };
 
