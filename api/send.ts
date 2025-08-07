@@ -182,15 +182,15 @@ app.get("/api/devocional/criar", async (_req, res) => {
   }
 });
 
-// DEVOCIONAL // Executa todo dia às 5h da manhã (UTC)
-cron.schedule("0 9 * * *", async () => {
+// DEVOCIONAL // Executa todo dia às 9h da manhã
+cron.schedule("0 12 * * *", async () => {
   console.log("⏰ Rodando tarefa de devocional diário");
   await salvarDevocionalDiario();
 });
 
 //ROTA Aniversário
 app.post("/aniversariantes", aniversariantesHandler);
-// 🎉 Agendar envio de notificações de aniversariantes às 12h (horário de Brasília)
+// 🎉 Agendar envio de notificações de aniversariantes às 10h 
 cron.schedule("0 13 * * *", async () => {
   console.log("⏰ Rodando tarefa de aniversariantes do dia");
   try {
