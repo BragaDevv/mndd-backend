@@ -1,6 +1,5 @@
 import { OpenAI } from "openai";
 import admin from "firebase-admin";
-import fetch from "node-fetch";
 
 export const salvarDevocionalDiario = async () => {
   try {
@@ -50,9 +49,7 @@ Responda apenas no formato JSON: { titulo, referencia, paragrafos }`,
     const json = JSON.parse(resultado);
 
     const dataFormatada = new Date()
-      .toLocaleDateString("pt-BR", {
-        timeZone: "America/Sao_Paulo",
-      })
+      .toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })
       .replace(/(\d{2})\/(\d{2})\/(\d{4})/, "$3-$2-$1");
 
     await admin
@@ -67,44 +64,7 @@ Responda apenas no formato JSON: { titulo, referencia, paragrafos }`,
       });
 
     console.log(`✅ Devocional do tema "${tema}" salvo com sucesso.`);
-
-    // 🚀 Enviar notificação push com título e primeiro parágrafo
-    const snapshot = await admin.firestore().collection("usuarios").get();
-    const tokens = snapshot.docs
-      .map((doc) => doc.data().expoToken)
-      .filter(
-        (t) => typeof t === "string" && t.startsWith("ExponentPushToken")
-      );
-
-    if (tokens.length === 0) {
-      console.warn(
-        "⚠️ Nenhum token válido encontrado para envio do devocional."
-      );
-      return;
-    }
-
-    const primeiroParagrafo = json.paragrafos[0] || "";
-
-    const messages = tokens.map((token) => ({
-      to: token,
-      sound: "default",
-      title: `📖 Devocional: ${json.titulo}`,
-      body: `${primeiroParagrafo} (${json.referencia})`,
-    }));
-
-    const expoResponse = await fetch("https://exp.host/--/api/v2/push/send", {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Accept-Encoding": "gzip, deflate",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(messages),
-    });
-
-    const expoResult = await expoResponse.json();
-    console.log("📤 Notificação enviada:", expoResult);
   } catch (error) {
-    console.error("❌ Erro ao gerar ou enviar devocional diário:", error);
+    console.error("❌ Erro ao gerar/salvar devocional diário:", error);
   }
 };

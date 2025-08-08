@@ -23,7 +23,7 @@ import cortarAssinaturaHandler from "./cortarAssinatura";
 import criarUsuarioHandler from "./criarUsuario";
 import listarUsuariosHandler from "./listarUsuarios";
 import excluirUsuarioHandler from "./excluirUsuario";
-
+import { notificacaoDevocionalMNDD } from "./notificacaoDevocionalMNDD";
 
 dotenv.config();
 console.log("🔐 Pexels Key:", process.env.PEXELS_API_KEY);
@@ -171,22 +171,19 @@ app.use("/api", cortarAssinaturaHandler);
 app.post("/api/extrair-estudo", extrairEstudoHandler);
 app.get("/api/extrair-estudo", extrairEstudoHandler); // ✅ adiciona suporte a GET
 
-// ✅ ROTA Devocional IA
-app.get("/api/devocional/criar", async (_req, res) => {
-  try {
-    await salvarDevocionalDiario();
-    res.status(200).send("✅ Devocional salvo no Firestore.");
-  } catch (error) {
-    console.error("❌ Erro ao salvar devocional:", error);
-    res.status(500).send("Erro ao salvar devocional.");
-  }
-});
 
-// DEVOCIONAL // Executa todo dia às 9h da manhã
-cron.schedule("0 12 * * *", async () => {
+// Salva Devocional IA - 08:00
+cron.schedule("0 8 * * *", async () => {
   console.log("⏰ Rodando tarefa de devocional diário");
   await salvarDevocionalDiario();
-});
+}, { timezone: "America/Sao_Paulo" });
+
+
+// Notificação Devocional - 08:01
+cron.schedule("1 8 * * *", async () => {
+  console.log("⏰ Enviando notificação do Devocional MNDD...");
+  await notificacaoDevocionalMNDD();
+}, { timezone: "America/Sao_Paulo" });
 
 //ROTA Aniversário
 app.post("/aniversariantes", aniversariantesHandler);
