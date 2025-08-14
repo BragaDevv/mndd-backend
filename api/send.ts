@@ -172,11 +172,11 @@ app.post("/api/extrair-estudo", extrairEstudoHandler);
 app.get("/api/extrair-estudo", extrairEstudoHandler); // ✅ adiciona suporte a GET
 
 
-// DEVOCIONAL - Executa todo dia às 9h da manhã (horário de São Paulo)
+// DEVOCIONAL - Executa todo dia às 8h da manhã (horário de São Paulo)
 cron.schedule(
-  "1 8 * * *",
+  "0 8 * * *",
   async () => {
-    console.log("⏰ Rodando tarefa de devocional diário (SP)");
+    console.log("⏰ Rodando tarefa de devocional diário IA");
     await salvarDevocionalDiario();
   },
   {
@@ -195,11 +195,11 @@ app.get("/cron/verificar-devocional-mndd", async (_req: Request, res: Response) 
   }
 });
 
-/** ⏰ Devocional MNDD AGENDAMENTO diário às 08:00 SP */
+/** ⏰ Devocional MNDD AGENDAMENTO diário às 08:05 SP */
 cron.schedule(
   "5 8 * * *",
   async () => {
-    console.log("⏰ Verificando devocional MNDD (SP 08:00)...");
+    console.log("⏰ Verificando devocional MNDD (SP 08:05)...");
     const resultado = await verificarDevocionalMNDDNovo();
     console.log("📋 Resultado:", resultado);
   },
