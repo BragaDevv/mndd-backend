@@ -184,7 +184,7 @@ cron.schedule(
   }
 );
 
-/** Devocional IA — rodar manualmente (sem proteção) */
+/** Devocional IA — rodar manualmente (sem proteção)  https://mndd-backend.onrender.com/cron/devocional/run   */
 app.all("/cron/devocional/run", async (_req: Request, res: Response) => {
   try {
     await salvarDevocionalDiario(); // executa AGORA
