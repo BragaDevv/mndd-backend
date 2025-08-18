@@ -43,7 +43,7 @@ router.post("/notificacao-ia", async (req: Request, res: Response) => {
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo", // pode trocar para "gpt-4o-mini" se disponível
       temperature: 0.7,
-      max_tokens: 180,
+      max_tokens: 180, 
       messages: [
         {
           role: "system",
