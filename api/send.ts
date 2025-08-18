@@ -186,6 +186,17 @@ cron.schedule(
   }
 );
 
+/** Devocional IA — rodar manualmente (sem proteção)  https://mndd-backend.onrender.com/cron/devocional/run   */
+app.all("/cron/devocional/run", async (_req: Request, res: Response) => {
+  try {
+    await salvarDevocionalDiario(); // executa AGORA
+    return res.json({ ok: true, ranAt: new Date().toISOString() });
+  } catch (err: any) {
+    console.error("❌ Erro ao rodar devocional manual:", err);
+    return res.status(500).json({ ok: false, error: err?.message || "Erro" });
+  }
+});
+
 /** Devocional MNDD MANUAL */
 app.get("/cron/verificar-devocional-mndd", async (_req: Request, res: Response) => {
   try {
