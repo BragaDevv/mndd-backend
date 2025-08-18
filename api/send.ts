@@ -24,6 +24,8 @@ import criarUsuarioHandler from "./criarUsuario";
 import listarUsuariosHandler from "./listarUsuarios";
 import excluirUsuarioHandler from "./excluirUsuario";
 import { verificarDevocionalMNDDNovo, hojeSP_ISO } from "./verificarDevocionalMNDDNovo";
+import notificacaoIA from "./notificacaoIA";
+
 
 dotenv.config();
 console.log("🔐 Pexels Key:", process.env.PEXELS_API_KEY);
@@ -246,6 +248,9 @@ app.get("/checar", async (_req, res) => {
 
 // ✅ ROTA GET VERSICULO DO DIA
 app.get("/api/versiculo-dia", versiculoDiaHandler);
+
+//NOTIF IA
+app.use("/", notificacaoIA);
 
 // ✅ Integração com OpenAI protegida
 const openai = new OpenAI({
