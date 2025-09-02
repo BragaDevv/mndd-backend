@@ -23,9 +23,17 @@ import cortarAssinaturaHandler from "./cortarAssinatura";
 import criarUsuarioHandler from "./criarUsuario";
 import listarUsuariosHandler from "./listarUsuarios";
 import excluirUsuarioHandler from "./excluirUsuario";
+<<<<<<< HEAD
 import { verificarDevocionalMNDDNovo, hojeSP_ISO } from "./verificarDevocionalMNDDNovo";
 import notificacaoIA from "./notificacaoIA";
 
+=======
+import {
+  verificarDevocionalMNDDNovo,
+  hojeSP_ISO,
+} from "./verificarDevocionalMNDDNovo";
+import presenteDiarioRouter from "./presenteDiario";
+>>>>>>> 6ae85b6 (Teste Presente)
 
 dotenv.config();
 console.log("🔐 Pexels Key:", process.env.PEXELS_API_KEY);
@@ -173,6 +181,8 @@ app.use("/api", cortarAssinaturaHandler);
 app.post("/api/extrair-estudo", extrairEstudoHandler);
 app.get("/api/extrair-estudo", extrairEstudoHandler); // ✅ adiciona suporte a GET
 
+//Rota Presente Diario
+app.use("/api", presenteDiarioRouter); // <= adiciona aqui
 
 // DEVOCIONAL - Executa todo dia às 8:05h da manhã (horário de São Paulo)
 cron.schedule(
@@ -198,15 +208,18 @@ app.all("/cron/devocional/run", async (_req: Request, res: Response) => {
 });
 
 /** Devocional MNDD MANUAL */
-app.get("/cron/verificar-devocional-mndd", async (_req: Request, res: Response) => {
-  try {
-    const resultado = await verificarDevocionalMNDDNovo();
-    res.json({ ok: true, dataHoje: hojeSP_ISO(), ...resultado });
-  } catch (err) {
-    console.error("❌ Erro na verificação:", err);
-    res.status(500).json({ ok: false, error: String(err) });
+app.get(
+  "/cron/verificar-devocional-mndd",
+  async (_req: Request, res: Response) => {
+    try {
+      const resultado = await verificarDevocionalMNDDNovo();
+      res.json({ ok: true, dataHoje: hojeSP_ISO(), ...resultado });
+    } catch (err) {
+      console.error("❌ Erro na verificação:", err);
+      res.status(500).json({ ok: false, error: String(err) });
+    }
   }
-});
+);
 
 /** ⏰ Devocional MNDD AGENDAMENTO diário às 08:10 SP */
 cron.schedule(
@@ -219,10 +232,9 @@ cron.schedule(
   { timezone: "America/Sao_Paulo" }
 );
 
-
 //ROTA Aniversário
 app.post("/aniversariantes", aniversariantesHandler);
-// 🎉 Agendar envio de notificações de aniversariantes às 10h 
+// 🎉 Agendar envio de notificações de aniversariantes às 10h
 cron.schedule("0 13 * * *", async () => {
   console.log("⏰ Rodando tarefa de aniversariantes do dia");
   try {
@@ -241,7 +253,9 @@ cron.schedule("0 15 * * *", async () => {
   console.log("⏰ Rodando tarefa de checagem de ranking...");
 
   try {
-    const response = await fetch("https://mndd-backend.onrender.com/ranking/check");
+    const response = await fetch(
+      "https://mndd-backend.onrender.com/ranking/check"
+    );
     const data = await response.text();
 
     console.log("✅ Resultado da execução do ranking:", data);
@@ -249,7 +263,6 @@ cron.schedule("0 15 * * *", async () => {
     console.error("❌ Erro ao executar checagem de ranking:", error);
   }
 });
-
 
 // ✅ ROTA auxiliar para forçar a checagem externa
 app.get("/checar", async (_req, res) => {
