@@ -23,17 +23,10 @@ import cortarAssinaturaHandler from "./cortarAssinatura";
 import criarUsuarioHandler from "./criarUsuario";
 import listarUsuariosHandler from "./listarUsuarios";
 import excluirUsuarioHandler from "./excluirUsuario";
-<<<<<<< HEAD
 import { verificarDevocionalMNDDNovo, hojeSP_ISO } from "./verificarDevocionalMNDDNovo";
 import notificacaoIA from "./notificacaoIA";
-
-=======
-import {
-  verificarDevocionalMNDDNovo,
-  hojeSP_ISO,
-} from "./verificarDevocionalMNDDNovo";
 import presenteDiarioRouter from "./presenteDiario";
->>>>>>> 6ae85b6 (Teste Presente)
+
 
 dotenv.config();
 console.log("🔐 Pexels Key:", process.env.PEXELS_API_KEY);
