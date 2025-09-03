@@ -68,17 +68,16 @@ async function generateGift(params: {
 
   const basePrompt =
     kind === "prayer"
-      ? `Escreva uma oração curta, afetuosa e bíblica para ${name}, em ${locale}, com 90-120 palavras, tom pastoral e linguagem simples.Use exemplos de personagens da bíblia caso queira. Inclua exatamente 1 versículo com referência curta entre parênteses. Não use listas. Termine com "Amém".`
-      : `Escreva uma mensagem motivacional cristã curta para ${name}, em ${locale}, com 80-120 palavras, tom encorajador e linguagem simples.Use exemplos de personagens da bíblia caso queira.Inclua exatamente 1 referência bíblica entre parênteses. Não use listas.`;
+      ? `Escreva uma oração curta, afetuosa e bíblica para ${name}, em ${locale}, com 90-110 palavras no máximo, tom pastoral e linguagem simples.Use 1 exemplo de personagens da bíblia caso queira. Inclua exatamente 1 versículo com referência curta entre parênteses. Não use listas.Não use frases como: 'nesse belo dia', ou 'nesse dia ensolarado' entre outras, pois não sabemos em que horário e nem o clima que está. Termine com "Amém".`
+      : `Escreva uma mensagem motivacional cristã curta para ${name}, em ${locale}, com 90-110 palavras no máximo, tom encorajador e linguagem simples.Use 1 exemplo de personagens da bíblia caso queira.Inclua exatamente 1 referência bíblica entre parênteses.Não use frases como: 'nesse belo dia', ou 'nesse dia ensolarado' entre outras, pois não sabemos em que horário e nem o clima que está. Não use listas.`;
 
   const fullPrompt = `${basePrompt}
 Estilo: ${estilo}. Foque em ${foco}. Contexto do dia: ${today}.`;
 
   console.log(
-    `[daily-gift:${_logId}] prompt (${locale}/${kind}) len=${fullPrompt.length} :: ${preview(
-      fullPrompt,
-      220
-    )}`
+    `[daily-gift:${_logId}] prompt (${locale}/${kind}) len=${
+      fullPrompt.length
+    } :: ${preview(fullPrompt, 220)}`
   );
 
   console.time(`[daily-gift:${_logId}] openai`);
@@ -166,10 +165,7 @@ router.get("/daily-gift/preview", async (req: Request, res: Response) => {
   const kind = (req.query.kind as Kind) || "prayer";
   const locale = (req.query.locale as string) || "pt-BR";
   console.log(
-    `[REQ ${id}] query: ${JSON.stringify({ name, kind, locale }).slice(
-      0,
-      300
-    )}`
+    `[REQ ${id}] query: ${JSON.stringify({ name, kind, locale }).slice(0, 300)}`
   );
 
   if (!process.env.OPENAI_API_KEY) {
