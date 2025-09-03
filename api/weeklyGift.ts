@@ -10,7 +10,10 @@ dayjsBase.extend(utc);
 dayjsBase.extend(tz);
 
 const TZ = "America/Sao_Paulo";
-const dayjs = () => dayjsBase.tz(TZ);
+// ✅ Define o fuso padrão para TODAS as instâncias do dayjs
+dayjsBase.tz.setDefault(TZ);
+// Helper para "agora" já no TZ definido
+const now = () => dayjsBase();
 
 const router = express.Router();
 
@@ -39,22 +42,23 @@ function pick<T>(arr: T[], r: number) {
   return arr[Math.floor(r * arr.length)]!;
 }
 
-/** Retorna a data (YYYY-MM-DD) da segunda-feira “desta semana” no fuso TZ */
+/** Segunda-feira (YYYY-MM-DD) da semana corrente no TZ configurado */
 function currentMondayISO(): string {
-  const d = dayjs();
+  const d = now();
   const dow = d.day(); // 0=dom, 1=seg, ...
-  const offset = dow === 0 ? -6 : 1 - dow; // traz para segunda
+  const offset = dow === 0 ? -6 : 1 - dow; // leva até a segunda
   return d.add(offset, "day").format("YYYY-MM-DD");
 }
 
 function isMondayNow(): boolean {
-  return dayjs().day() === 1;
+  return now().day() === 1;
 }
 
+/** Próxima segunda em ISO UTC (sempre parseável no front) */
 function nextMondayISO(): string {
-  const d = dayjs();
-  const add = ((8 - d.day()) % 7) || 7; // quantos dias até a próxima segunda
-  return d.add(add, "day").startOf("day").format();
+  const d = now();
+  const add = ((8 - d.day()) % 7) || 7;
+  return d.add(add, "day").startOf("day").toDate().toISOString();
 }
 
 /* =============== core generator =============== */
@@ -64,6 +68,10 @@ async function generateWeeklyGift(params: {
   _logId?: string;
 }) {
   const { name, locale, _logId } = params;
+
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("OPENAI_API_KEY ausente no servidor.");
+  }
 
   // seed por: segunda da semana + nome + "motivation"
   const monday = currentMondayISO();
@@ -86,27 +94,26 @@ async function generateWeeklyGift(params: {
   const tom = pick(tons, rng());
   const foco = pick(focos, rng());
 
-  // prompt: 1 versículo no início em referência curta e conteúdo todo ENTRE ASPAS
+  // ⚠️ Formato final exigido:
+  // <Ref curta> — "mensagem motivacional (90–110 palavras, cite ao menos um versículo)"
+  // — Ministério Nascido de Deus (MNDD)
   const prompt = `
 Escreva em ${locale} uma MENSAGEM MOTIVACIONAL CRISTÃ para iniciar a semana de ${name}.
-Regras de formato (SIGA À RISCA):
-1) Comece com UMA referência bíblica curta (ex: "Js 1:9" ou "Filipenses 4:13"), sem o texto do versículo, apenas a referência.
-2) Escreva TODA a referância e versículo ENTRE ASPAS DUPLAS.
-3) Ao final da linha, QUEBRE linha e escreva exatamente: — Ministério Nascido de Deus (MNDD)
-4) Conteúdo: linguagem simples, prática e encorajadora; traga pelo menos 1 EXEMPLO bíblico de fé/perseverança (ex: Davi, Ester, Paulo, Noé, José).
-5) Não use listas, emojis, ou menções a clima/horário. 90–110 palavras no máximo.
-6) Não repita a referência ao longo do texto. Não coloque aspas no conteúdo, apenas na referência.
-Tom: ${tom}. Foque em ${foco}.
-Contexto: segunda-feira, início de semana.
-`;
+Regras de FORMATAÇÃO (siga à risca):
+1) Comece com UMA referência bíblica curta (ex.: Rm 8:31, Js 1:9, Fp 4:13), referência e versículo entre aspas.
+2) Depois da referência, escreva: espaço, travessão (—) e espaço.
+3) Em seguida, escreva toda a mensagem.
+4) A mensagem deve citar ao menos UM versículo (pode mencionar o texto brevemente e/ou a referência dentro do conteúdo).
+5) 90–110 palavras. Linguagem simples, prática e encorajadora. Traga um EXEMPLO bíblico de fé/perseverança (Davi, Ester, Paulo, Noé, José, etc).
+6) NÃO use listas, emojis ou menções a clima/horário.
+7) Depois, QUEBRE linha e escreva exatamente: — Ministério Nascido de Deus (MNDD)
+
+Tom: ${tom}. Foque em ${foco}. Contexto: segunda-feira, início de semana.
+`.trim();
 
   console.log(
     `[weekly-gift:${_logId}] prompt len=${prompt.length} :: ${preview(prompt, 220)}`
   );
-
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error("OPENAI_API_KEY ausente no servidor.");
-  }
 
   console.time(`[weekly-gift:${_logId}] openai`);
   const resp = await openai.chat.completions.create({
@@ -125,7 +132,7 @@ Contexto: segunda-feira, início de semana.
 
   const text =
     resp.choices?.[0]?.message?.content?.trim() ||
-    `Fp 4:13 — "Você pode recomeçar a semana com força em Cristo; Ele sustenta quem confia, assim como Paulo perseverou em meio às lutas. Olhe para frente com fé, dê um passo de cada vez e mantenha seu coração firme na esperança do Evangelho. O Deus que começou a boa obra em você é fiel para completá-la. Enfrente os desafios lembrando-se de que não caminha só; o Senhor é seu auxílio constante e guia seguro. Respire fundo, confie e avance. A semana é uma oportunidade de ver a graça em ação." 
+    `Fp 4:13 — "Comece a semana com coragem em Cristo; como Paulo, persevere nas lutas, lembrando que a força vem do Senhor. Dê um passo de cada vez e mantenha o coração firmado na esperança do Evangelho. O Deus que começou a boa obra em você é fiel para completar. Confie, ore e avance; Ele cuida dos detalhes e sustenta seus passos (Fp 4:13)."
 — Ministério Nascido de Deus (MNDD)`;
 
   const usage = (resp as any)?.usage || {};
@@ -139,7 +146,7 @@ Contexto: segunda-feira, início de semana.
   return {
     week_monday: monday,
     kind: "motivation" as Kind,
-    text, // já vem no formato: <Ref> — "conteúdo"\n— MNDD
+    text, // formato: <Ref> — "conteúdo"\n— MNDD
   };
 }
 
@@ -207,7 +214,8 @@ router.get("/weekly-gift/preview", async (req: Request, res: Response) => {
       return res.json({
         available: false,
         nextAvailableAt: nextAt,
-        reason: "Disponível apenas às segundas-feiras. Use ?force=true para teste.",
+        reason:
+          "Disponível apenas às segundas-feiras. Use ?force=true para teste.",
       });
     }
 
