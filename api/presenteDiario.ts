@@ -68,8 +68,8 @@ async function generateGift(params: {
 
   const basePrompt =
     kind === "prayer"
-      ? `Escreva uma oração curta, afetuosa e bíblica para ${name}, em ${locale}, com 90-120 palavras, tom pastoral e linguagem simples. Inclua exatamente 1 versículo com referência curta. Não use listas. Termine com "Amém".`
-      : `Escreva uma mensagem motivacional cristã curta para ${name}, em ${locale}, com 80-120 palavras, tom encorajador e linguagem simples. Inclua exatamente 1 referência bíblica entre parênteses. Não use listas.`;
+      ? `Escreva uma oração curta, afetuosa e bíblica para ${name}, em ${locale}, com 90-120 palavras, tom pastoral e linguagem simples.Use exemplos de personagens da bíblia caso queira. Inclua exatamente 1 versículo com referência curta entre parênteses. Não use listas. Termine com "Amém".`
+      : `Escreva uma mensagem motivacional cristã curta para ${name}, em ${locale}, com 80-120 palavras, tom encorajador e linguagem simples.Use exemplos de personagens da bíblia caso queira.Inclua exatamente 1 referência bíblica entre parênteses. Não use listas.`;
 
   const fullPrompt = `${basePrompt}
 Estilo: ${estilo}. Foque em ${foco}. Contexto do dia: ${today}.`;
