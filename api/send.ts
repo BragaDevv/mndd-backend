@@ -23,10 +23,12 @@ import cortarAssinaturaHandler from "./cortarAssinatura";
 import criarUsuarioHandler from "./criarUsuario";
 import listarUsuariosHandler from "./listarUsuarios";
 import excluirUsuarioHandler from "./excluirUsuario";
-import { verificarDevocionalMNDDNovo, hojeSP_ISO } from "./verificarDevocionalMNDDNovo";
+import {
+  verificarDevocionalMNDDNovo,
+  hojeSP_ISO,
+} from "./verificarDevocionalMNDDNovo";
 import notificacaoIA from "./notificacaoIA";
-import presenteDiarioRouter from "./presenteDiario";
-
+import weeklyGiftRouter from "./weeklyGift";
 
 dotenv.config();
 console.log("🔐 Pexels Key:", process.env.PEXELS_API_KEY);
@@ -174,8 +176,8 @@ app.use("/api", cortarAssinaturaHandler);
 app.post("/api/extrair-estudo", extrairEstudoHandler);
 app.get("/api/extrair-estudo", extrairEstudoHandler); // ✅ adiciona suporte a GET
 
-//Rota Presente Diario
-app.use("/api", presenteDiarioRouter); // <= adiciona aqui
+//Rota Presente Segunda feira
+app.use("/api", weeklyGiftRouter);
 
 // DEVOCIONAL - Executa todo dia às 8:05h da manhã (horário de São Paulo)
 cron.schedule(
