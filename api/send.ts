@@ -23,6 +23,7 @@ import cortarAssinaturaHandler from "./cortarAssinatura";
 import criarUsuarioHandler from "./criarUsuario";
 import listarUsuariosHandler from "./listarUsuarios";
 import excluirUsuarioHandler from "./excluirUsuario";
+import setClaimAdmin from "./setClaimAdmin";
 import {
   verificarDevocionalMNDDNovo,
   hojeSP_ISO,
@@ -153,6 +154,7 @@ app.post("/criar-usuario", criarUsuarioHandler);
 app.get("/listar-usuarios", listarUsuariosHandler);
 app.delete("/excluir-usuario", excluirUsuarioHandler);
 app.post("/redefinir-senha", redefinirSenhaHandler);
+app.post("/set-claim-admin", setClaimAdmin);
 
 // ✅ ROTA Notif Cultos
 app.get("/cultos/avisar", cultosAvisoHandler);
