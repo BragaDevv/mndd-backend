@@ -79,7 +79,7 @@ Regras obrigatórias (siga à risca):
 2) Segunda linha: apenas a REFERÊNCIA bíblica curta (ex.: "Rm 8:31"). Não inclua aspas.
 3) Terceira linha: o TEXTO do versículo correspondente ENTRE aspas (use “ ”).
 4) Quarta linha: CONTEÚDO devocional com 80–110 palavras, linguagem simples e encorajadora. Traga uma breve menção a um personagem bíblico (Davi, Ester, Paulo, Noé, José etc.). Foque em ${foco}. Tom ${tom}. Não use listas, nem emojis.
-5) Quinta linha: escreva exatamente "— Ministério Nascido de Deus (MNDD)".
+5) Quinta linha: escreva exatamente "Ministério Nascido de Deus (MNDD)".
 
 Não acrescente nada além dessas 5 linhas e das quebras de linha.
 `.trim();
