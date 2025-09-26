@@ -30,6 +30,7 @@ import {
 } from "./verificarDevocionalMNDDNovo";
 import notificacaoIA from "./notificacaoIA";
 import weeklyGiftRouter from "./weeklyGift";
+import notificarOwnerUsuarioCriado from "./notificarOwnerUsuarioCriado";
 
 dotenv.config();
 console.log("🔐 Pexels Key:", process.env.PEXELS_API_KEY);
@@ -155,7 +156,9 @@ app.get("/listar-usuarios", listarUsuariosHandler);
 app.delete("/excluir-usuario", excluirUsuarioHandler);
 app.post("/redefinir-senha", redefinirSenhaHandler);
 app.post("/set-claim-admin", setClaimAdmin);
-
+//
+// ... após app.use(bodyParser.json()) etc.
+app.post("/notify/owner/user-created", notificarOwnerUsuarioCriado);
 // ✅ ROTA Notif Cultos
 app.get("/cultos/avisar", cultosAvisoHandler);
 
