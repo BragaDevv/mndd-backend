@@ -4,7 +4,7 @@ import fetch from "node-fetch";
 
 const OWNER_EMAIL = process.env.OWNER_EMAIL || "bragadevv@gmail.com";
 
-// Busca o token do owner dentro de usuarios, filtrando por email
+// pega o token do owner em 'usuarios' filtrando por email
 async function getOwnerExpoToken(): Promise<string | null> {
   try {
     const db = admin.firestore();
@@ -37,16 +37,17 @@ export default async function notificarOwnerUsuarioCriado(
   }
 
   try {
-    const { uid, email, displayName, providerId, createdAt } = req.body || {};
-    if (!uid && !email) {
+    // ✅ agora recebemos nome e sobrenome direto do app
+    const { uid, nome, sobrenome } = req.body || {};
+    if (!nome || !sobrenome) {
       return res
         .status(400)
-        .json({ error: "Informe ao menos uid ou email no corpo da requisição." });
+        .json({ error: "Envie 'nome' e 'sobrenome' no corpo da requisição." });
     }
 
     const ownerToken = await getOwnerExpoToken();
     if (!ownerToken) {
-      console.warn("⚠️ Owner sem token válido salvo em usuarios.");
+      console.warn("⚠️ Owner sem token válido salvo em 'usuarios'.");
       return res.status(200).json({
         success: true,
         sent: 0,
@@ -54,23 +55,23 @@ export default async function notificarOwnerUsuarioCriado(
       });
     }
 
+    const nomeCompleto = `${nome} ${sobrenome}`.trim();
+
     const message = {
       to: ownerToken,
       sound: "default",
       title: "Novo usuário criado",
-      body: email ? `Conta criada: ${email}` : `Cadastro criado (UID: ${uid})`,
+      body: nomeCompleto, // 👈 mostra apenas nome + sobrenome
       data: {
         event: "auth_user_created",
         uid: uid ?? null,
-        email: email ?? null,
-        displayName: displayName ?? null,
-        providerId: providerId ?? null,
-        createdAt: createdAt ?? Date.now(),
+        nome,
+        sobrenome,
+        createdAt: Date.now(),
       },
       priority: "high" as const,
     };
 
-    // Envia push para o Expo
     const expoResponse = await fetch("https://exp.host/--/api/v2/push/send", {
       method: "POST",
       headers: {
