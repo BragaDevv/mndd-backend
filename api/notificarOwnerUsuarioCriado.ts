@@ -1,31 +1,13 @@
-// Envia push SÓ para o owner quando um usuário é criado.
-// POST /notify/owner/user-created  { uid, email?, displayName?, providerId?, createdAt? }
-
 import { Request, Response } from "express";
 import admin from "firebase-admin";
 import fetch from "node-fetch";
 
-const db = admin.firestore();
 const OWNER_EMAIL = process.env.OWNER_EMAIL || "bragadevv@gmail.com";
 
-/** Lê o token do owner:
- *  1) tenta em config_app/owner.expoToken | expoPushToken
- *  2) fallback: usuarios where email == OWNER_EMAIL
- */
+// Busca o token do owner dentro de usuarios, filtrando por email
 async function getOwnerExpoToken(): Promise<string | null> {
   try {
-    // 1) config_app/owner
-    const ownerCfg = await db.doc("config_app/owner").get();
-    if (ownerCfg.exists) {
-      const data = ownerCfg.data() || {};
-      const token =
-        (data.expoToken as string) || (data.expoPushToken as string) || null;
-      if (typeof token === "string" && token.startsWith("ExponentPushToken[")) {
-        return token;
-      }
-    }
-
-    // 2) usuarios (pelo email)
+    const db = admin.firestore();
     const snap = await db
       .collection("usuarios")
       .where("email", "==", OWNER_EMAIL)
@@ -64,11 +46,11 @@ export default async function notificarOwnerUsuarioCriado(
 
     const ownerToken = await getOwnerExpoToken();
     if (!ownerToken) {
-      console.warn("⚠️ Owner sem token válido salvo.");
+      console.warn("⚠️ Owner sem token válido salvo em usuarios.");
       return res.status(200).json({
         success: true,
         sent: 0,
-        message: "Owner sem Expo token salvo em config_app/owner ou usuarios.",
+        message: "Owner sem Expo token salvo na coleção usuarios.",
       });
     }
 
@@ -88,7 +70,7 @@ export default async function notificarOwnerUsuarioCriado(
       priority: "high" as const,
     };
 
-    // Envia 1 (um) push para o owner
+    // Envia push para o Expo
     const expoResponse = await fetch("https://exp.host/--/api/v2/push/send", {
       method: "POST",
       headers: {
