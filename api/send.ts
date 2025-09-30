@@ -58,6 +58,7 @@ import {
 import notificacaoIA from "./notificacaoIA";
 import weeklyGiftRouter from "./weeklyGift";
 import notificarOwnerUsuarioCriado from "./notificarOwnerUsuarioCriado";
+import resumoCapituloRouter from "./resumoCapitulo";
 
 const app = express();
 app.use(bodyParser.json({ limit: "3mb" }));
@@ -283,6 +284,8 @@ app.use("/", notificacaoIA);
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || "",
 });
+
+app.use("/api/openai", resumoCapituloRouter);
 
 app.post("/api/openai/ask", async (req: Request, res: Response) => {
   const { prompt } = req.body;
