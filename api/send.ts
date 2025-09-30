@@ -1,3 +1,4 @@
+
 import express, { Request, Response } from "express";
 import admin from "firebase-admin";
 import bodyParser from "body-parser";
@@ -6,6 +7,32 @@ import fetch from "node-fetch";
 import OpenAI from "openai";
 import cron from "node-cron";
 
+dotenv.config();
+console.log("🔐 Pexels Key:", process.env.PEXELS_API_KEY);
+
+// 🔐 Inicialização do Firebase Admin (ANTES dos imports de rotas)
+const jsonString = process.env.GOOGLE_CREDENTIALS;
+if (!jsonString) {
+  console.error("❌ GOOGLE_CREDENTIALS não definida.");
+  process.exit(1);
+}
+
+let serviceAccount: admin.ServiceAccount;
+try {
+  serviceAccount = JSON.parse(jsonString);
+} catch (error) {
+  console.error("❌ Erro ao fazer parse das credenciais:", error);
+  process.exit(1);
+}
+
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+  console.log("✅ Firebase Admin inicializado.");
+}
+
+// ⬇️ Agora sim: importe os handlers/rotas que podem usar admin.firestore()
 import versiculoHoraHandler from "./versiculoHora";
 import versiculoHandler from "./versiculo";
 import { checarEnviarVersiculo } from "./versiculoCron";
@@ -30,34 +57,11 @@ import {
 } from "./verificarDevocionalMNDDNovo";
 import notificacaoIA from "./notificacaoIA";
 import weeklyGiftRouter from "./weeklyGift";
-
-dotenv.config();
-console.log("🔐 Pexels Key:", process.env.PEXELS_API_KEY);
+import notificarOwnerUsuarioCriado from "./notificarOwnerUsuarioCriado";
 
 const app = express();
 app.use(bodyParser.json({ limit: "3mb" }));
 
-// 🔐 Inicialização do Firebase Admin
-const jsonString = process.env.GOOGLE_CREDENTIALS;
-if (!jsonString) {
-  console.error("❌ GOOGLE_CREDENTIALS não definida.");
-  process.exit(1);
-}
-
-let serviceAccount: admin.ServiceAccount;
-try {
-  serviceAccount = JSON.parse(jsonString);
-} catch (error) {
-  console.error("❌ Erro ao fazer parse das credenciais:", error);
-  process.exit(1);
-}
-
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
-  console.log("✅ Firebase Admin inicializado.");
-}
 
 // ✅ ROTA /send - Envia notificação personalizada
 app.post("/send", async (req: Request, res: Response) => {
@@ -155,7 +159,9 @@ app.get("/listar-usuarios", listarUsuariosHandler);
 app.delete("/excluir-usuario", excluirUsuarioHandler);
 app.post("/redefinir-senha", redefinirSenhaHandler);
 app.post("/set-claim-admin", setClaimAdmin);
-
+//
+// ... após app.use(bodyParser.json()) etc.
+app.post("/notify/owner/user-created", notificarOwnerUsuarioCriado);
 // ✅ ROTA Notif Cultos
 app.get("/cultos/avisar", cultosAvisoHandler);
 
