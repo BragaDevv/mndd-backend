@@ -59,31 +59,23 @@ router.post("/ask", async (req: Request, res: Response) => {
 });
 
 router.post("/resumo-capitulo", async (req: Request, res: Response) => {
-  const { bookName, bookAbbrev, chapterNumber, bibleVersion, verses } =
-    req.body;
+  const { bookName, bookAbbrev, chapterNumber, bibleVersion } = req.body;
 
-  if (!bookName || !chapterNumber || !verses || !Array.isArray(verses)) {
+  if (!bookName || !chapterNumber) {
     console.warn("❌ Dados inválidos para resumo-capitulo.");
-    return res
-      .status(400)
-      .json({ error: "Informe bookName, chapterNumber e verses (array)." });
+    return res.status(400).json({ error: "Informe bookName e chapterNumber." });
   }
 
   const prompt = `
-Você é um assistente bíblico cristão do Ministério Nascido de Deus (MNDD).
-Resuma de forma clara, simples e acolhedora o capítulo da Bíblia abaixo, citando versículos quando apropriado.
-Mantenha-se estritamente no contexto bíblico.
-
-Livro: ${bookName} (${bookAbbrev})
-Capítulo: ${chapterNumber}
-Versão: ${bibleVersion}
-
-Texto do capítulo:
-${verses.map((v: string, i: number) => `${i + 1}. ${v}`).join("\n")}
+Faça um resumo claro, simples e acolhedor do capítulo ${chapterNumber} de ${bookName} (${
+    bookAbbrev || ""
+  }),
+na versão ${bibleVersion || "ACF"}.
+Mantenha-se estritamente no contexto bíblico e cite versículos quando apropriado (ex.: v.3-5).
 `;
 
   console.log(
-    `📖 [ResumoCapítulo] Gerando resumo de ${bookName} ${chapterNumber} (${bibleVersion})`
+    `📖 [ResumoCapítulo] Gerando resumo de ${bookName} ${chapterNumber}`
   );
 
   try {
