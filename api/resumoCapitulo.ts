@@ -14,14 +14,12 @@ router.post("/resumo-capitulo", async (req: Request, res: Response) => {
   const { bookName, bookAbbrev, chapterNumber, bibleVersion } = req.body;
 
   if (!bookName || !chapterNumber) {
-    return res
-      .status(400)
-      .json({ error: "Informe bookName e chapterNumber." });
+    return res.status(400).json({ error: "Informe bookName e chapterNumber." });
   }
 
   const prompt = `
-Faça um resumo claro, simples e acolhedor do capítulo ${chapterNumber} de ${bookName} (${bookAbbrev || ""}),
-na versão ${bibleVersion || "ACF"}.
+Faça um resumo claro, simples e acolhedor do capítulo ${chapterNumber} de ${bookName} (${bookAbbrev || ""}), 
+Sempre inicie com  " No capítulo ${chapterNumber} de ${bookName}, ..." 
 Mantenha-se estritamente no contexto bíblico e cite versículos quando apropriado (ex.: v.3-5).
 `;
 
