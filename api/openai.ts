@@ -50,10 +50,77 @@ router.post("/ask", async (req: Request, res: Response) => {
 
     return res.status(200).json({ result });
   } catch (error: any) {
-    console.error("❌ [OpenAI] Erro ao consultar OpenAI:", error?.message || error);
+    console.error(
+      "❌ [OpenAI] Erro ao consultar OpenAI:",
+      error?.message || error
+    );
     return res.status(500).json({ error: "Erro ao consultar OpenAI." });
   }
 });
 
+router.post("/resumo-capitulo", async (req: Request, res: Response) => {
+  const { bookName, bookAbbrev, chapterNumber, bibleVersion, verses } =
+    req.body;
+
+  if (!bookName || !chapterNumber || !verses || !Array.isArray(verses)) {
+    console.warn("❌ Dados inválidos para resumo-capitulo.");
+    return res
+      .status(400)
+      .json({ error: "Informe bookName, chapterNumber e verses (array)." });
+  }
+
+  const prompt = `
+Você é um assistente bíblico cristão do Ministério Nascido de Deus (MNDD).
+Resuma de forma clara, simples e acolhedora o capítulo da Bíblia abaixo, citando versículos quando apropriado.
+Mantenha-se estritamente no contexto bíblico.
+
+Livro: ${bookName} (${bookAbbrev})
+Capítulo: ${chapterNumber}
+Versão: ${bibleVersion}
+
+Texto do capítulo:
+${verses.map((v: string, i: number) => `${i + 1}. ${v}`).join("\n")}
+`;
+
+  console.log(
+    `📖 [ResumoCapítulo] Gerando resumo de ${bookName} ${chapterNumber} (${bibleVersion})`
+  );
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        {
+          role: "system",
+          content:
+            "Você é um assistente bíblico cristão do Ministério Nascido de Deus (MNDD). " +
+            "Responda de forma clara, simples e acolhedora, citando versículos quando apropriado. " +
+            "Mantenha-se estritamente no contexto bíblico.",
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      temperature: 0.7,
+      max_tokens: 700,
+    });
+
+    const resumo = completion.choices[0]?.message?.content?.trim();
+    console.log(
+      "✅ [ResumoCapítulo] Resumo gerado:",
+      resumo?.slice(0, 120),
+      "..."
+    );
+
+    return res.status(200).json({ resumo });
+  } catch (error: any) {
+    console.error(
+      "❌ [ResumoCapítulo] Erro ao consultar OpenAI:",
+      error?.message || error
+    );
+    return res.status(500).json({ error: "Erro ao gerar resumo do capítulo." });
+  }
+});
 
 export default router;
