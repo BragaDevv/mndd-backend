@@ -59,6 +59,7 @@ import notificacaoIA from "./notificacaoIA";
 import weeklyGiftRouter from "./weeklyGift";
 import notificarOwnerUsuarioCriado from "./notificarOwnerUsuarioCriado";
 import resumoCapituloRouter from "./resumoCapitulo";
+import { renderEstudoCloudinary } from "./renderEstudoCloudinary";
 
 const app = express();
 app.use(bodyParser.json({ limit: "3mb" }));
@@ -184,6 +185,9 @@ app.use("/api", cortarAssinaturaHandler);
 // ✅ ROTA Estudo
 app.post("/api/extrair-estudo", extrairEstudoHandler);
 app.get("/api/extrair-estudo", extrairEstudoHandler); // ✅ adiciona suporte a GET
+
+// ✅ Nova rota
+app.post("/api/render-estudo", renderEstudoCloudinary);
 
 //Rota Presente Segunda feira
 app.use("/api", weeklyGiftRouter);

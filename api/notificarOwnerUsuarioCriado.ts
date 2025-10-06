@@ -1,31 +1,12 @@
+// routes/notificarOwnerUsuarioCriado.ts
 import { Request, Response } from "express";
-import admin from "firebase-admin";
 import fetch from "node-fetch";
 
-const OWNER_EMAIL = process.env.OWNER_EMAIL || "bragadevv@gmail.com";
+// ✅ Token agora vem APENAS das variáveis de ambiente da Render
+const OWNER_EXPO_TOKEN = process.env.OWNER_EXPO_TOKEN;
 
-// pega o token do owner em 'usuarios' filtrando por email
-async function getOwnerExpoToken(): Promise<string | null> {
-  try {
-    const db = admin.firestore();
-    const snap = await db
-      .collection("usuarios")
-      .where("email", "==", OWNER_EMAIL)
-      .limit(1)
-      .get();
-
-    if (!snap.empty) {
-      const u = snap.docs[0].data();
-      const token =
-        (u.expoToken as string) || (u.expoPushToken as string) || null;
-      if (typeof token === "string" && token.startsWith("ExponentPushToken[")) {
-        return token;
-      }
-    }
-  } catch (e) {
-    console.error("[getOwnerExpoToken] erro:", e);
-  }
-  return null;
+function isValidExpoToken(token?: string) {
+  return typeof token === "string" && token.startsWith("ExponentPushToken[");
 }
 
 export default async function notificarOwnerUsuarioCriado(
@@ -37,7 +18,6 @@ export default async function notificarOwnerUsuarioCriado(
   }
 
   try {
-    // ✅ agora recebemos nome e sobrenome direto do app
     const { uid, nome, sobrenome } = req.body || {};
     if (!nome || !sobrenome) {
       return res
@@ -45,23 +25,20 @@ export default async function notificarOwnerUsuarioCriado(
         .json({ error: "Envie 'nome' e 'sobrenome' no corpo da requisição." });
     }
 
-    const ownerToken = await getOwnerExpoToken();
-    if (!ownerToken) {
-      console.warn("⚠️ Owner sem token válido salvo em 'usuarios'.");
-      return res.status(200).json({
-        success: true,
-        sent: 0,
-        message: "Owner sem Expo token salvo na coleção usuarios.",
+    if (!isValidExpoToken(OWNER_EXPO_TOKEN)) {
+      return res.status(500).json({
+        error:
+          "OWNER_EXPO_TOKEN ausente ou inválido. Configure a variável de ambiente no Render com um ExponentPushToken[...] válido.",
       });
     }
 
     const nomeCompleto = `${nome} ${sobrenome}`.trim();
 
     const message = {
-      to: ownerToken,
+      to: OWNER_EXPO_TOKEN,
       sound: "default",
       title: "Novo usuário criado",
-      body: nomeCompleto, // 👈 mostra apenas nome + sobrenome
+      body: nomeCompleto,
       data: {
         event: "auth_user_created",
         uid: uid ?? null,
@@ -87,10 +64,11 @@ export default async function notificarOwnerUsuarioCriado(
     return res.status(200).json({
       success: true,
       sent: 1,
+      to: OWNER_EXPO_TOKEN,
       expoResult: result,
     });
   } catch (error) {
-    console.error("❌ Erro ao notificar owner:", error);
+    console.error("❌ Erro ao enviar push:", error);
     return res.status(500).json({ error: "Erro interno ao enviar notificação." });
   }
 }
