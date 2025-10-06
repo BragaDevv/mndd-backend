@@ -1,63 +1,73 @@
+// api/renderEstudo.ts
 import { Request, Response } from "express";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
+import admin from "firebase-admin";
 
-// 🔹 Configura Cloudinary com variáveis de ambiente
+// garanta que o admin já esteja inicializado em outro ponto do app
+// admin.initializeApp({...})
+
+const db = admin.firestore();
+
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
   api_key: process.env.CLOUDINARY_API_KEY!,
   api_secret: process.env.CLOUDINARY_API_SECRET!,
 });
 
-// 🔹 Usa multer para upload temporário em memória
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 25 * 1024 * 1024 }, // até 25MB
+  limits: { fileSize: 25 * 1024 * 1024 },
 });
 
-export const renderEstudoCloudinary = [
+export const renderEstudo = [
   upload.single("file"),
   async (req: Request, res: Response) => {
     try {
       if (!req.file) {
-        return res.status(400).json({ error: "Envie um arquivo (PDF ou PPTX)." });
+        return res.status(400).json({ error: "Envie um arquivo PDF ou PPTX." });
       }
 
-      // Faz upload para Cloudinary
-      const uploadResult = await new Promise<any>((resolve, reject) => {
+      const { tema = "Sem Tema", titulo = "Estudo" } = req.body || {};
+
+      // 1) upload para Cloudinary (auto lida com pdf/pptx)
+      const up = await new Promise<any>((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
-          {
-            folder: "estudos",
-            resource_type: "auto", // aceita PDF, PPTX, DOCX, etc.
-          },
-          (error, result) => {
-            if (error) reject(error);
-            else resolve(result);
-          }
+          { folder: "estudos", resource_type: "auto" },
+          (err, result) => (err ? reject(err) : resolve(result))
         );
         stream.end(req.file!.buffer);
       });
 
-      const publicId = uploadResult.public_id;
-      const format = uploadResult.format;
-      const pages = uploadResult.pages || 1; // PDFs retornam o total de páginas
+      const publicId: string = up.public_id;
+      const totalPages: number = up.pages || 1;
 
-      // Gera URLs de imagem de cada página (Cloudinary converte automaticamente!)
-      const urls = Array.from({ length: pages }, (_, i) =>
-        cloudinary.url(`${publicId}.jpg`, {
-          transformation: [{ page: i + 1 }],
-        })
+      // 2) gera URLs de cada página (jpg) — Cloudinary usa o parâmetro `page`
+      const pages: string[] = Array.from({ length: totalPages }, (_, i) =>
+        cloudinary.url(publicId + ".jpg", { transformation: [{ page: i + 1 }] })
       );
 
-      res.json({
-        ok: true,
-        source: { format, name: req.file.originalname },
-        count: pages,
-        pages: urls,
+      // 3) salva no Firestore
+      const docRef = await db.collection("estudos_biblicos").add({
+        tema,
+        titulo,
+        pages,
+        pageCount: totalPages,
+        publicId,
+        provider: "cloudinary",
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
-    } catch (error) {
-      console.error("Erro ao processar estudo:", error);
-      res.status(500).json({ error: "Erro ao converter arquivo." });
+
+      // 4) responde com id (para o app reusar depois) e páginas para preview imediato
+      return res.json({
+        ok: true,
+        id: docRef.id,
+        pages,
+        pageCount: totalPages,
+      });
+    } catch (e) {
+      console.error("Erro renderEstudo:", e);
+      return res.status(500).json({ error: "Falha ao processar arquivo." });
     }
   },
 ];
