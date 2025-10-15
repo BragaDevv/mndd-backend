@@ -20,7 +20,7 @@ const upload = multer({
   limits: { fileSize: 25 * 1024 * 1024 },
 });
 
-export const renderEstudoCloudinary= [
+export const renderEstudoCloudinary = [
   upload.single("file"),
   async (req: Request, res: Response) => {
     try {
@@ -44,7 +44,17 @@ export const renderEstudoCloudinary= [
 
       // 2) gera URLs de cada página (jpg) — Cloudinary usa o parâmetro `page`
       const pages: string[] = Array.from({ length: totalPages }, (_, i) =>
-        cloudinary.url(publicId + ".jpg", { transformation: [{ page: i + 1 }] })
+        cloudinary.url(publicId, {
+          secure: true,
+          format: "jpg",
+          transformation: [
+            { page: i + 1, density: 300 },             // aumenta DPI do PDF -> imagem (padrão é ~72)
+            { width: 2400, crop: "scale" },            // largura grande para zoom sem pixelar
+            { fetch_format: "auto", quality: "auto:best" }, // usa WebP/AVIF quando possível e prioriza nitidez
+            { effect: "sharpen:50" },                  // reforça contornos do texto
+            { flags: "progressive:steep" },            // carrega gradualmente (melhor UX)
+          ],
+        })
       );
 
       // 3) salva no Firestore
