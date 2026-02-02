@@ -56,7 +56,6 @@ import {
   hojeSP_ISO,
 } from "./verificarDevocionalMNDDNovo";
 import notificacaoIA from "./notificacaoIA";
-import weeklyGiftRouter from "./weeklyGift";
 import notificarOwnerUsuarioCriado from "./notificarOwnerUsuarioCriado";
 import resumoCapituloRouter from "./resumoCapitulo";
 import { renderEstudoCloudinary } from "./renderEstudoCloudinary";
@@ -188,9 +187,6 @@ app.get("/api/extrair-estudo", extrairEstudoHandler); // ✅ adiciona suporte a 
 
 // ✅ Nova rota
 app.post("/api/render-estudo", renderEstudoCloudinary);
-
-//Rota Presente Segunda feira
-app.use("/api", weeklyGiftRouter);
 
 // DEVOCIONAL - Executa todo dia às 8:05h da manhã (horário de São Paulo)
 cron.schedule(

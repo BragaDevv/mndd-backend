@@ -2,7 +2,7 @@
 import admin from "firebase-admin";
 import fetch from "node-fetch";
 
-// Armazena o último dia em que foi executado
+// Armazena o último dia em que foi executado com SUCESSO
 let ultimaExecucaoDia: string | null = null;
 
 /** Pega data/hora "AGORA" no fuso de São Paulo (America/Sao_Paulo) */
@@ -34,6 +34,10 @@ function pad2(n: number) {
   return String(n).padStart(2, "0");
 }
 
+function isValidHHmm(v?: string) {
+  return typeof v === "string" && /^\d{2}:\d{2}$/.test(v);
+}
+
 export async function checarEnviarVersiculo() {
   try {
     // 1) lê configuração (horário) do Firestore
@@ -48,13 +52,13 @@ export async function checarEnviarVersiculo() {
     console.log("[CRON] now SP :", `${pad2(sp.hour)}:${pad2(sp.minute)}:${pad2(sp.second)}`);
     console.log("[CRON] horaSalva:", horaSalva ?? null);
 
-    if (!horaSalva || !/^\d{2}:\d{2}$/.test(horaSalva)) {
+    if (!isValidHHmm(horaSalva)) {
       console.log("⚠️ Nenhum horário válido salvo para envio de versículo (esperado 'HH:mm').");
       return;
     }
 
     // 2) calcula minutos atuais e minutos agendados
-    const [horaAgendada, minutoAgendado] = horaSalva.split(":").map(Number);
+    const [horaAgendada, minutoAgendado] = horaSalva!.split(":").map(Number);
 
     const minutosAgora = sp.hour * 60 + sp.minute;
     const minutosAgendado = horaAgendada * 60 + minutoAgendado;
@@ -62,7 +66,7 @@ export async function checarEnviarVersiculo() {
     // 3) data "hoje" no fuso SP (YYYY-MM-DD)
     const dataHoje = `${sp.year}-${pad2(sp.month)}-${pad2(sp.day)}`;
 
-    // 4) intervalo de 5 minutos para evitar perder por delay
+    // 4) intervalo de 5 minutos (pra não perder por delay)
     const dentroDoIntervalo =
       minutosAgora >= minutosAgendado && minutosAgora < minutosAgendado + 5;
 
@@ -70,7 +74,7 @@ export async function checarEnviarVersiculo() {
       `🕓 Agora: ${pad2(sp.hour)}:${pad2(sp.minute)} | Esperado: ${horaSalva} | dentroDoIntervalo=${dentroDoIntervalo} | ultimaExecucaoDia=${ultimaExecucaoDia} | hoje=${dataHoje}`
     );
 
-    // 5) dispara apenas 1 vez por dia dentro do intervalo
+    // 5) dispara apenas 1 vez por dia (somente se tiver sucesso) dentro do intervalo
     if (dentroDoIntervalo && ultimaExecucaoDia !== dataHoje) {
       console.log(
         `⏰ Dentro do intervalo (${horaSalva} até ${horaSalva} + 5min). Chamando rota /versiculo...`
@@ -93,14 +97,24 @@ export async function checarEnviarVersiculo() {
       }
 
       console.log("[CRON] resposta status:", res.status);
-      console.log("✅ Versículo enviado via cron:", data);
+      console.log("[CRON] resposta body:", data);
 
-      ultimaExecucaoDia = dataHoje;
-      console.log("[CRON] ✅ ultimaExecucaoDia atualizado =>", ultimaExecucaoDia);
+      // ✅ Só considera “executado no dia” se foi sucesso MESMO
+      const ok = res.ok && data?.success === true;
+
+      if (ok) {
+        ultimaExecucaoDia = dataHoje;
+        console.log("[CRON] ✅ ultimaExecucaoDia atualizado =>", ultimaExecucaoDia);
+      } else {
+        console.log(
+          "[CRON] ⚠️ Falhou. Não atualizei ultimaExecucaoDia (vai tentar novamente dentro do intervalo)."
+        );
+      }
+
       return;
     }
 
-    // se não entrou no intervalo, só loga
+    // se não entrou no intervalo ou já executou com sucesso hoje, só loga
     return;
   } catch (err) {
     console.error("❌ Erro no cronômetro do versículo:", err);

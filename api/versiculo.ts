@@ -1,4 +1,5 @@
-// Envia o versículo do dia via push notification para todos os DEVICES logados (isLoggedIn == true)
+// routes/versiculo.ts (ou onde estiver seu handler)
+// Envia o versículo do dia via push para TODOS os DEVICES logados em push_devices
 
 import { Request, Response } from "express";
 import admin from "firebase-admin";
@@ -28,20 +29,23 @@ export default async function handler(req: Request, res: Response) {
     const dia = new Date().getDate();
     const versiculo = versiculos[dia % versiculos.length];
 
-    console.log("[VERSICULO] buscando devices logados...");
+    console.log("[VERSICULO] buscando push_devices logados...");
 
+    // ✅ Sem collectionGroup. Sem índice composto chato.
+    // (pode até funcionar sem índice, mas se pedir, é índice simples no campo isLoggedIn)
     const snap = await admin
       .firestore()
-      .collectionGroup("devices")
+      .collection("push_devices")
       .where("isLoggedIn", "==", true)
       .get();
 
-    console.log("[VERSICULO] devices encontrados:", snap.size);
+    console.log("[VERSICULO] push_devices encontrados:", snap.size);
 
     const tokens = snap.docs
       .map((d) => d.data()?.expoToken)
       .filter(isValidExpoToken);
 
+    // ✅ remove duplicados (se o mesmo token aparecer repetido)
     const uniqueTokens = Array.from(new Set(tokens));
     console.log("[VERSICULO] tokens validos (unicos):", uniqueTokens.length);
 
@@ -49,7 +53,7 @@ export default async function handler(req: Request, res: Response) {
       return res.status(200).json({
         success: true,
         sent: 0,
-        message: "Nenhum token válido encontrado (devices logados).",
+        message: "Nenhum token válido encontrado (push_devices logados).",
       });
     }
 
@@ -65,16 +69,17 @@ export default async function handler(req: Request, res: Response) {
       body,
     }));
 
+    // ✅ Expo recomenda chunks de até 100
     const chunkSize = 100;
-    const chunks: any[] = [];
-    for (let i = 0; i < messages.length; i += chunkSize) {
-      chunks.push(messages.slice(i, i + chunkSize));
-    }
-
     const results: any[] = [];
 
-    for (const [idx, chunk] of chunks.entries()) {
-      console.log(`[VERSICULO] enviando chunk ${idx + 1}/${chunks.length} (${chunk.length} msgs)`);
+    for (let i = 0; i < messages.length; i += chunkSize) {
+      const chunk = messages.slice(i, i + chunkSize);
+      console.log(
+        `[VERSICULO] enviando chunk ${Math.floor(i / chunkSize) + 1}/${Math.ceil(
+          messages.length / chunkSize
+        )} (${chunk.length} msgs)`
+      );
 
       const expoResponse = await fetch("https://exp.host/--/api/v2/push/send", {
         method: "POST",
@@ -88,7 +93,6 @@ export default async function handler(req: Request, res: Response) {
 
       const status = expoResponse.status;
 
-      // tenta JSON, se falhar cai pra texto (pra não explodir)
       let payload: any = null;
       try {
         payload = await expoResponse.json();
@@ -110,14 +114,13 @@ export default async function handler(req: Request, res: Response) {
       versiculo,
       expoResult: results,
     });
-} catch (error: any) {
-  console.error("❌ Erro ao enviar versículo:", {
-    message: error?.message,
-    details: error?.details,
-    code: error?.code,
-    stack: error?.stack,
-  });
-
-  return res.status(500).json({ error: "Erro interno ao enviar versículo." });
-}
+  } catch (error: any) {
+    console.error("❌ Erro ao enviar versículo:", {
+      message: error?.message,
+      details: error?.details,
+      code: error?.code,
+      stack: error?.stack,
+    });
+    return res.status(500).json({ error: "Erro interno ao enviar versículo." });
+  }
 }
