@@ -1,6 +1,22 @@
 import { OpenAI } from "openai";
 import admin from "firebase-admin";
 
+function hojeISO_SP(): string {
+  // gera yyyy-MM-dd considerando SP
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+
+  const y = parts.find((p) => p.type === "year")?.value;
+  const m = parts.find((p) => p.type === "month")?.value;
+  const d = parts.find((p) => p.type === "day")?.value;
+
+  return `${y}-${m}-${d}`;
+}
+
 export const salvarDevocionalDiario = async () => {
   try {
     const formatter = new Intl.DateTimeFormat("pt-BR", {
@@ -51,23 +67,24 @@ Responda apenas no formato JSON: { titulo, referencia, paragrafos }`,
       throw new Error("Resposta da IA não veio em JSON válido.");
     }
 
-    const dataFormatada = new Date()
-      .toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })
-      .replace(/(\d{2})\/(\d{2})\/(\d{4})/, "$3-$2-$1");
+    const dataId = hojeISO_SP(); // ✅ yyyy-MM-dd
 
-    await admin
-      .firestore()
-      .collection("devocional_diario")
-      .doc("hoje")
-      .set({
-        ...json,
-        tema,
-        criadoEm: admin.firestore.FieldValue.serverTimestamp(),
-        data: dataFormatada,
-      });
+    const payload = {
+      ...json,
+      tema,
+      criadoEm: admin.firestore.FieldValue.serverTimestamp(),
+      data: dataId, // ✅ mantém no mesmo formato do docId
+    };
 
-    console.log(`✅ Devocional do tema "${tema}" salvo com sucesso.`);
-    // ✅ Sem envio de notificação push.
+    const col = admin.firestore().collection("devocional_diario");
+
+    // ✅ 1) salva o histórico do dia (NUNCA sobrescreve outros dias)
+    await col.doc(dataId).set(payload, { merge: true });
+
+    // ✅ 2) opcional: ponteiro "hoje" (sempre reflete o dia atual)
+    await col.doc("hoje").set(payload, { merge: true });
+
+    console.log(`✅ Devocional "${tema}" salvo em devocional_diario/${dataId}`);
   } catch (error) {
     console.error("❌ Erro ao gerar/salvar devocional diário:", error);
   }
