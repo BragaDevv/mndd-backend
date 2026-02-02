@@ -1,6 +1,3 @@
-// routes/versiculo.ts (ou onde estiver seu handler)
-// Envia o versículo do dia via push para TODOS os DEVICES logados em push_devices
-
 import { Request, Response } from "express";
 import admin from "firebase-admin";
 import fetch from "node-fetch";
@@ -13,7 +10,6 @@ function isValidExpoToken(t: any): t is string {
   );
 }
 
-// evita body gigante
 function safeBody(input: string, max = 220) {
   const s = (input ?? "").toString().trim();
   if (s.length <= max) return s;
@@ -29,16 +25,14 @@ export default async function handler(req: Request, res: Response) {
     const dia = new Date().getDate();
     const versiculo = versiculos[dia % versiculos.length];
 
-    console.log("[VERSICULO] buscando push_devices logados...");
+    console.log("[VERSICULO] buscando devices logados (collectionGroup devices)...");
 
-    // ✅ Sem collectionGroup. Sem índice composto chato.
-    // (pode até funcionar sem índice, mas se pedir, é índice simples no campo isLoggedIn)
-   const snap = await admin
-  .firestore()
-  .collectionGroup("devices")
-  .where("isLoggedIn", "==", true)
-  .orderBy(admin.firestore.FieldPath.documentId()) // ✅ usa o __name__
-  .get();
+    // ✅ SEM orderBy => sem índice composto => evita FAILED_PRECONDITION
+    const snap = await admin
+      .firestore()
+      .collectionGroup("devices")
+      .where("isLoggedIn", "==", true)
+      .get();
 
     console.log("[VERSICULO] devices encontrados:", snap.size);
 
@@ -46,7 +40,6 @@ export default async function handler(req: Request, res: Response) {
       .map((d) => d.data()?.expoToken)
       .filter(isValidExpoToken);
 
-    // ✅ remove duplicados (se o mesmo token aparecer repetido)
     const uniqueTokens = Array.from(new Set(tokens));
     console.log("[VERSICULO] tokens validos (unicos):", uniqueTokens.length);
 
@@ -54,7 +47,7 @@ export default async function handler(req: Request, res: Response) {
       return res.status(200).json({
         success: true,
         sent: 0,
-        message: "Nenhum token válido encontrado (push_devices logados).",
+        message: "Nenhum token válido encontrado (devices logados).",
       });
     }
 
@@ -70,12 +63,12 @@ export default async function handler(req: Request, res: Response) {
       body,
     }));
 
-    // ✅ Expo recomenda chunks de até 100
     const chunkSize = 100;
     const results: any[] = [];
 
     for (let i = 0; i < messages.length; i += chunkSize) {
       const chunk = messages.slice(i, i + chunkSize);
+
       console.log(
         `[VERSICULO] enviando chunk ${Math.floor(i / chunkSize) + 1}/${Math.ceil(
           messages.length / chunkSize
@@ -116,7 +109,8 @@ export default async function handler(req: Request, res: Response) {
       expoResult: results,
     });
   } catch (error: any) {
-    console.error("❌ Erro ao enviar versículo:", {
+    console.error("❌ Erro ao enviar versículo (raw):", error);
+    console.error("❌ Erro ao enviar versículo (parsed):", {
       message: error?.message,
       details: error?.details,
       code: error?.code,
