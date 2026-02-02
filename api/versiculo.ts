@@ -110,13 +110,14 @@ export default async function handler(req: Request, res: Response) {
       versiculo,
       expoResult: results,
     });
-  } catch (error: any) {
-    console.error("❌ Erro ao enviar versículo:", {
-      message: error?.message,
-      stack: error?.stack,
-      name: error?.name,
-    });
+} catch (error: any) {
+  console.error("❌ Erro ao enviar versículo:", {
+    message: error?.message,
+    details: error?.details,
+    code: error?.code,
+    stack: error?.stack,
+  });
 
-    return res.status(500).json({ error: "Erro interno ao enviar versículo." });
-  }
+  return res.status(500).json({ error: "Erro interno ao enviar versículo." });
+}
 }
