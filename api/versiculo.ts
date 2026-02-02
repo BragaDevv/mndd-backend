@@ -33,13 +33,14 @@ export default async function handler(req: Request, res: Response) {
 
     // ✅ Sem collectionGroup. Sem índice composto chato.
     // (pode até funcionar sem índice, mas se pedir, é índice simples no campo isLoggedIn)
-    const snap = await admin
-      .firestore()
-      .collection("push_devices")
-      .where("isLoggedIn", "==", true)
-      .get();
+   const snap = await admin
+  .firestore()
+  .collectionGroup("devices")
+  .where("isLoggedIn", "==", true)
+  .orderBy(admin.firestore.FieldPath.documentId()) // ✅ usa o __name__
+  .get();
 
-    console.log("[VERSICULO] push_devices encontrados:", snap.size);
+    console.log("[VERSICULO] devices encontrados:", snap.size);
 
     const tokens = snap.docs
       .map((d) => d.data()?.expoToken)
