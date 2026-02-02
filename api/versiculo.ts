@@ -92,7 +92,7 @@ export default async function handler(req: Request, res: Response) {
     for (let i = 0; i < messages.length; i += chunkSize) {
       const chunk = messages.slice(i, i + chunkSize);
       console.log(
-        `[VERSICULO] enviando chunk ${Math.floor(i / chunkSize) + 1}/${Math.ceil(messages.length / chunkSize)} (${chunk.length} msgs)`
+        `[VERSICULOO] enviando chunk ${Math.floor(i / chunkSize) + 1}/${Math.ceil(messages.length / chunkSize)} (${chunk.length} msgs)`
       );
 
       const expoResponse = await fetch("https://exp.host/--/api/v2/push/send", {
