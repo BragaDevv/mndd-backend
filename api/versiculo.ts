@@ -16,30 +16,53 @@ function safeBody(input: string, max = 220) {
   return s.slice(0, max - 1) + "…";
 }
 
+// limita concorrência pra não estourar o Firestore
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length) as any;
+  let i = 0;
+
+  const workers = new Array(Math.min(limit, items.length)).fill(0).map(async () => {
+    while (i < items.length) {
+      const idx = i++;
+      results[idx] = await fn(items[idx], idx);
+    }
+  });
+
+  await Promise.all(workers);
+  return results;
+}
+
 export default async function handler(req: Request, res: Response) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Método não permitido" });
-  }
+  if (req.method !== "POST") return res.status(405).json({ error: "Método não permitido" });
 
   try {
     const dia = new Date().getDate();
     const versiculo = versiculos[dia % versiculos.length];
 
-    console.log("[VERSICULO] buscando devices logados (collectionGroup devices)...");
+    console.log("[VERSICULO] buscando usuarios...");
+    const usersSnap = await admin.firestore().collection("usuarios").get();
+    console.log("[VERSICULO] usuarios encontrados:", usersSnap.size);
 
-    // ✅ SEM orderBy => sem índice composto => evita FAILED_PRECONDITION
-    const snap = await admin
-      .firestore()
-      .collectionGroup("devices")
-      .where("isLoggedIn", "==", true)
-      .get();
+    const uids = usersSnap.docs.map((d) => d.id);
 
-    console.log("[VERSICULO] devices encontrados:", snap.size);
+    console.log("[VERSICULO] buscando devices logados por usuario (sem collectionGroup)...");
+    const tokensNested = await mapWithConcurrency(uids, 10, async (uid) => {
+      const devSnap = await admin
+        .firestore()
+        .collection("usuarios")
+        .doc(uid)
+        .collection("devices")
+        .where("isLoggedIn", "==", true)
+        .get();
 
-    const tokens = snap.docs
-      .map((d) => d.data()?.expoToken)
-      .filter(isValidExpoToken);
+      return devSnap.docs.map((d) => d.data()?.expoToken).filter(isValidExpoToken);
+    });
 
+    const tokens = tokensNested.flat();
     const uniqueTokens = Array.from(new Set(tokens));
     console.log("[VERSICULO] tokens validos (unicos):", uniqueTokens.length);
 
@@ -68,11 +91,8 @@ export default async function handler(req: Request, res: Response) {
 
     for (let i = 0; i < messages.length; i += chunkSize) {
       const chunk = messages.slice(i, i + chunkSize);
-
       console.log(
-        `[VERSICULO] enviando chunk ${Math.floor(i / chunkSize) + 1}/${Math.ceil(
-          messages.length / chunkSize
-        )} (${chunk.length} msgs)`
+        `[VERSICULO] enviando chunk ${Math.floor(i / chunkSize) + 1}/${Math.ceil(messages.length / chunkSize)} (${chunk.length} msgs)`
       );
 
       const expoResponse = await fetch("https://exp.host/--/api/v2/push/send", {
@@ -86,14 +106,11 @@ export default async function handler(req: Request, res: Response) {
       });
 
       const status = expoResponse.status;
-
-      let payload: any = null;
-      try {
-        payload = await expoResponse.json();
-      } catch {
-        const txt = await expoResponse.text();
-        payload = { error: "non-json-response", status, raw: txt?.slice(0, 500) };
-      }
+      const payload = await expoResponse.json().catch(async () => ({
+        error: "non-json-response",
+        status,
+        raw: (await expoResponse.text()).slice(0, 500),
+      }));
 
       if (status < 200 || status >= 300) {
         console.error("[VERSICULO] Expo retornou erro:", status, payload);
@@ -110,12 +127,6 @@ export default async function handler(req: Request, res: Response) {
     });
   } catch (error: any) {
     console.error("❌ Erro ao enviar versículo (raw):", error);
-    console.error("❌ Erro ao enviar versículo (parsed):", {
-      message: error?.message,
-      details: error?.details,
-      code: error?.code,
-      stack: error?.stack,
-    });
     return res.status(500).json({ error: "Erro interno ao enviar versículo." });
   }
 }
