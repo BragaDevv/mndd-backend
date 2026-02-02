@@ -1,62 +1,93 @@
-//Envia o versículo do dia via push notification para todos os usuários que possuem token válido na coleção usuarios.//
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Envia o versículo do dia via push notification para todos os DEVICES logados (isLoggedIn == true)
+// =================================================================================================
 
 import { Request, Response } from "express";
 import admin from "firebase-admin";
 import fetch from "node-fetch";
 import versiculos from "../data/versiculos.json";
 
+function isValidExpoToken(t: any): t is string {
+  return (
+    typeof t === "string" &&
+    (t.startsWith("ExpoPushToken[") || t.startsWith("ExponentPushToken["))
+  );
+}
+
 export default async function handler(req: Request, res: Response) {
-  // Garante que apenas POST é aceito
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Método não permitido" });
   }
 
   try {
-    // Seleciona o versículo com base no dia atual
+    // Versículo do dia
     const dia = new Date().getDate();
     const versiculo = versiculos[dia % versiculos.length];
 
-    // Busca os tokens da coleção 'usuarios'
-    const snapshot = await admin.firestore().collection("usuarios").get();
-    const tokens = snapshot.docs
-      .map((doc) => doc.data().expoToken) // ou 'expoPushToken' se for esse o campo usado no app
-      .filter((t) => typeof t === "string" && t.startsWith("ExponentPushToken["));
+    // ✅ Busca tokens apenas dos devices logados
+    const snap = await admin
+      .firestore()
+      .collectionGroup("devices")
+      .where("isLoggedIn", "==", true)
+      .get();
 
-    if (tokens.length === 0) {
-      console.warn("⚠️ Nenhum token válido encontrado para envio do versículo.");
-      return res.status(200).json({ success: true, sent: 0, message: "Nenhum token válido encontrado." });
+    // Pega tokens válidos
+    const tokens = snap.docs
+      .map((d) => d.data()?.expoToken)
+      .filter(isValidExpoToken);
+
+    // (opcional) remove duplicados, caso o mesmo token apareça mais de uma vez
+    const uniqueTokens = Array.from(new Set(tokens));
+
+    if (uniqueTokens.length === 0) {
+      console.warn("⚠️ Nenhum token válido encontrado (devices logados).");
+      return res.status(200).json({
+        success: true,
+        sent: 0,
+        message: "Nenhum token válido encontrado (devices logados).",
+      });
     }
 
-    // Monta as mensagens
-    const messages = tokens.map((token) => ({
+    // Monta mensagens
+    const messages = uniqueTokens.map((token) => ({
       to: token,
       sound: "default",
       title: "📖 Versículo do Dia",
       body: `${versiculo.texto} (${versiculo.livro} ${versiculo.capitulo}:${versiculo.versiculo})`,
     }));
 
-    // Envia para a Expo Push API
-    const expoResponse = await fetch("https://exp.host/--/api/v2/push/send", {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Accept-Encoding": "gzip, deflate",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(messages),
-    });
+    // ✅ Expo recomenda enviar em chunks (até 100 por request)
+    const chunkSize = 100;
+    const chunks: any[] = [];
+    for (let i = 0; i < messages.length; i += chunkSize) {
+      chunks.push(messages.slice(i, i + chunkSize));
+    }
 
-    const result = await expoResponse.json();
+    const results: any[] = [];
+    for (const chunk of chunks) {
+      const expoResponse = await fetch("https://exp.host/--/api/v2/push/send", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Accept-Encoding": "gzip, deflate",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(chunk),
+      });
 
-    res.status(200).json({
+      const json = await expoResponse.json();
+      results.push(json);
+    }
+
+    return res.status(200).json({
       success: true,
-      sent: tokens.length,
+      sent: uniqueTokens.length,
       versiculo,
-      expoResult: result,
+      expoResult: results,
     });
   } catch (error) {
     console.error("❌ Erro ao enviar versículo:", error);
-    res.status(500).json({ error: "Erro interno ao enviar versículo." });
+    return res
+      .status(500)
+      .json({ error: "Erro interno ao enviar versículo." });
   }
 }
