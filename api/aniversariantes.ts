@@ -60,22 +60,35 @@ export default async function handler(req: Request, res: Response) {
     const diaHoje = String(hoje.getDate()).padStart(2, "0");
     const mesHoje = String(hoje.getMonth() + 1).padStart(2, "0");
 
-    const aniversariantes: { uid: string; nome: string }[] = [];
+    const aniversariantes: { uid: string; nomeCompleto: string }[] = [];
 
     for (const doc of usersSnap.docs) {
       const data = doc.data();
       const dataNascimento = data.dataNascimento;
-      const nome = data.nome || "Irmão(a)";
+      const nome = data.nome || "";
+      const sobrenome = data.sobrenome || "";
+
+      const nomeCompleto =
+        `${nome} ${sobrenome}`.trim() || "Irmão(a)";
+
 
       if (typeof dataNascimento === "string" && dataNascimento.includes("/")) {
         const [dia, mes] = dataNascimento.split("/");
         if (dia === diaHoje && mes === mesHoje) {
-          aniversariantes.push({ uid: doc.id, nome });
+          aniversariantes.push({
+            uid: doc.id,
+            nomeCompleto,
+          });
+
         }
       }
     }
 
-    console.log("🎂 Aniversariantes hoje:", aniversariantes.map(a => a.nome));
+    console.log(
+      "🎂 Aniversariantes hoje:",
+      aniversariantes.map(a => a.nomeCompleto)
+    );
+
 
     if (aniversariantes.length === 0) {
       return res.status(200).json({
@@ -102,13 +115,14 @@ export default async function handler(req: Request, res: Response) {
     const message =
       aniversariantes.length === 1
         ? {
-            title: "🎉 Parabéns!",
-            body: `Hoje é o aniversário de ${aniversariantes[0].nome}! 🎂`,
-          }
+          title: "🎉 Parabéns!",
+          body: `Hoje é o aniversário de ${aniversariantes[0].nomeCompleto}! 🎂`,
+        }
+
         : {
-            title: "🎉 Feliz aniversário!",
-            body: "Hoje temos aniversariantes! 🎂 Acesse o app para conferir.",
-          };
+          title: "🎉 Feliz aniversário!",
+          body: "Hoje temos aniversariantes! 🎂 Acesse o app para conferir.",
+        };
 
     const messages = uniqueTokens.map((token) => ({
       to: token,
