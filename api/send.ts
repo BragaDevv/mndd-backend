@@ -33,6 +33,7 @@ if (!admin.apps.length) {
 }
 
 // ⬇️ Agora sim: importe os handlers/rotas que podem usar admin.firestore()
+import sendNotificationRouter from "./sendNotification";
 import versiculoHoraHandler from "./versiculoHora";
 import versiculoHandler from "./versiculo";
 import { checarEnviarVersiculo } from "./versiculoCron";
@@ -63,71 +64,8 @@ import { renderEstudoCloudinary } from "./renderEstudoCloudinary";
 const app = express();
 app.use(bodyParser.json({ limit: "3mb" }));
 
-
-// ✅ ROTA /send - Envia notificação personalizada
-app.post("/send", async (req: Request, res: Response) => {
-  const { title, body, image, to, tokens } = req.body;
-
-  if (!title || !body) {
-    return res
-      .status(400)
-      .json({ error: "Campos 'title' e 'body' são obrigatórios." });
-  }
-
-  try {
-    let expoTokens: string[] = [];
-
-    if (Array.isArray(tokens)) {
-      expoTokens = tokens.filter(
-        (t) => typeof t === "string" && t.startsWith("ExponentPushToken[")
-      );
-    } else if (typeof to === "string" && to.startsWith("ExponentPushToken[")) {
-      expoTokens = [to];
-    } else {
-      const snapshot = await admin.firestore().collection("usuarios").get();
-      expoTokens = snapshot.docs
-        .map((doc) => doc.data().expoToken)
-        .filter(
-          (t) => typeof t === "string" && t.startsWith("ExponentPushToken[")
-        );
-    }
-
-    if (expoTokens.length === 0) {
-      console.warn("⚠️ Nenhum token válido encontrado.");
-      return res.status(200).json({ success: true, sent: 0 });
-    }
-
-    const messages = expoTokens.map((token) => ({
-      to: token,
-      sound: "default",
-      title,
-      body,
-      ...(image ? { image } : {}),
-    }));
-
-    const expoResponse = await fetch("https://exp.host/--/api/v2/push/send", {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Accept-Encoding": "gzip, deflate",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(messages),
-    });
-
-    const result = await expoResponse.json();
-    console.log("📨 Notificações enviadas:", result);
-
-    return res.json({
-      success: true,
-      sent: expoTokens.length,
-      expoResult: result,
-    });
-  } catch (error) {
-    console.error("❌ Erro ao enviar notificação:", error);
-    return res.status(500).json({ error: "Erro ao enviar notificação." });
-  }
-});
+// ✅ Notifcação Manual
+app.use("/", sendNotificationRouter);
 
 // ✅ Versículo do Dia - manual
 app.post("/versiculo", versiculoHandler);
