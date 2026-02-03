@@ -16,7 +16,7 @@ function chunkArray<T>(arr: T[], size: number) {
 }
 
 async function sendExpo(messages: any[]) {
-  const chunks = chunkArray(messages, 100); // Expo: até 100
+  const chunks = chunkArray(messages, 100); // Expo: até 100 por request
   const results: any[] = [];
 
   for (const chunk of chunks) {
@@ -60,17 +60,18 @@ export default async function handler(req: Request, res: Response) {
     const diaHoje = String(hoje.getDate()).padStart(2, "0");
     const mesHoje = String(hoje.getMonth() + 1).padStart(2, "0");
 
-    const aniversariantes: { uid: string; nomeCompleto: string }[] = [];
+    const aniversariantes: { uid: string; nomeCompleto: string; primeiroNome: string }[] =
+      [];
 
     for (const doc of usersSnap.docs) {
       const data = doc.data();
       const dataNascimento = data.dataNascimento;
-      const nome = data.nome || "";
-      const sobrenome = data.sobrenome || "";
 
-      const nomeCompleto =
-        `${nome} ${sobrenome}`.trim() || "Irmão(a)";
+      const nome = (data.nome || "").toString().trim();
+      const sobrenome = (data.sobrenome || "").toString().trim();
 
+      const nomeCompleto = `${nome} ${sobrenome}`.trim() || "Irmão(a)";
+      const primeiroNome = (nomeCompleto.split(" ")[0] || "Irmão(a)").trim();
 
       if (typeof dataNascimento === "string" && dataNascimento.includes("/")) {
         const [dia, mes] = dataNascimento.split("/");
@@ -78,17 +79,13 @@ export default async function handler(req: Request, res: Response) {
           aniversariantes.push({
             uid: doc.id,
             nomeCompleto,
+            primeiroNome,
           });
-
         }
       }
     }
 
-    console.log(
-      "🎂 Aniversariantes hoje:",
-      aniversariantes.map(a => a.nomeCompleto)
-    );
-
+    console.log("🎂 Aniversariantes hoje:", aniversariantes.map((a) => a.nomeCompleto));
 
     if (aniversariantes.length === 0) {
       return res.status(200).json({
@@ -97,52 +94,122 @@ export default async function handler(req: Request, res: Response) {
       });
     }
 
-    // 2️⃣ TODOS os devices logados (query direta)
+    // 2️⃣ Busca devices logados
+    // ⚠️ Para personalizar, é necessário que push_devices tenha o campo `uid`
     const devicesSnap = await db
       .collection("push_devices")
       .where("isLoggedIn", "==", true)
       .get();
 
-    const tokensTodosLogados = devicesSnap.docs
-      .map((d) => d.data()?.expoToken)
-      .filter(isValidExpoToken);
+    // Monta lista com token + uid (se existir)
+    const devices = devicesSnap.docs
+      .map((d) => {
+        const data = d.data() || {};
+        return {
+          uid: (data.uid || data.userId || data.ownerUid || null) as string | null,
+          expoToken: data.expoToken as any,
+        };
+      })
+      .filter((d) => isValidExpoToken(d.expoToken));
 
-    const uniqueTokens = Array.from(new Set(tokensTodosLogados));
+    const totalDevicesLogados = devices.length;
 
-    console.log("📲 Tokens logados:", uniqueTokens.length);
+    // Se não houver uid nos devices, não dá pra separar aniversariante vs outros
+    const temUidNosDevices = devices.some((d) => !!d.uid);
 
-    // 3️⃣ Mensagem
-    const message =
+    if (!temUidNosDevices) {
+      return res.status(500).json({
+        success: false,
+        error:
+          "push_devices não possui campo uid (ou userId/ownerUid). Sem isso não é possível enviar push personalizado apenas ao aniversariante.",
+        hint:
+          "Salve o uid junto do expoToken em push_devices (ex: { uid, expoToken, isLoggedIn }).",
+      });
+    }
+
+    // 3️⃣ Separa tokens do(s) aniversariante(s) e do restante
+    const aniversarianteUids = new Set(aniversariantes.map((a) => a.uid));
+
+    const tokensAniversariantesSet = new Set<string>();
+    const tokensOutrosSet = new Set<string>();
+
+    for (const d of devices) {
+      if (!d.uid) continue;
+      if (aniversarianteUids.has(d.uid)) tokensAniversariantesSet.add(d.expoToken);
+      else tokensOutrosSet.add(d.expoToken);
+    }
+
+    const tokensAniversariantes = Array.from(tokensAniversariantesSet);
+    const tokensOutros = Array.from(tokensOutrosSet);
+
+    console.log("📲 Tokens aniversariantes:", tokensAniversariantes.length);
+    console.log("📲 Tokens outros:", tokensOutros.length);
+
+    // 4️⃣ Monta mensagens
+    // Push personalizado: 1 por aniversariante (vai para todos os tokens daquele uid)
+    // Se houver vários aniversariantes, cada um recebe o próprio texto.
+    const devicesByUid = new Map<string, string[]>();
+    for (const d of devices) {
+      if (!d.uid) continue;
+      const arr = devicesByUid.get(d.uid) || [];
+      arr.push(d.expoToken);
+      devicesByUid.set(d.uid, arr);
+    }
+
+    const messagesPersonalizados: any[] = [];
+    for (const a of aniversariantes) {
+      const tokensDoAniversariante = devicesByUid.get(a.uid) || [];
+      for (const token of Array.from(new Set(tokensDoAniversariante))) {
+        messagesPersonalizados.push({
+          to: token,
+          sound: "default",
+          title: `🎉 Parabéns, ${a.primeiroNome}!`,
+          body: "Que Deus abençoe sua vida hoje e sempre 🙏🎂",
+        });
+      }
+    }
+
+    // Push geral: para o restante (exclui tokens dos aniversariantes)
+    // Se for 1 aniversariante: “Hoje é o aniversário de Nome Sobrenome!”
+    // Se forem vários: texto genérico (pra não ficar enorme).
+    const msgGeral =
       aniversariantes.length === 1
         ? {
-          title: "🎉 Parabéns!",
-          body: `Hoje é o aniversário de ${aniversariantes[0].nomeCompleto}! 🎂`,
-        }
-
+            title: "🎂 Aniversário hoje!",
+            body: `🎂 Hoje é o aniversário de ${aniversariantes[0].nomeCompleto}!`,
+          }
         : {
-          title: "🎉 Feliz aniversário!",
-          body: "Hoje temos aniversariantes! 🎂 Acesse o app para conferir.",
-        };
+            title: "🎂 Aniversários hoje!",
+            body: "🎂 Hoje temos aniversariantes! Acesse o app para conferir.",
+          };
 
-    const messages = uniqueTokens.map((token) => ({
+    const messagesGerais: any[] = tokensOutros.map((token) => ({
       to: token,
       sound: "default",
-      title: message.title,
-      body: message.body,
+      title: msgGeral.title,
+      body: msgGeral.body,
     }));
 
-    if (!modoTeste && messages.length > 0) {
-      await sendExpo(messages);
+    const totalMensagens = messagesPersonalizados.length + messagesGerais.length;
+
+    // 5️⃣ Envio
+    if (!modoTeste && totalMensagens > 0) {
+      // Você pode enviar separado (melhor pra log)
+      await sendExpo(messagesPersonalizados);
+      await sendExpo(messagesGerais);
     }
 
     return res.status(200).json({
       success: true,
       modoTeste,
       totalAniversariantes: aniversariantes.length,
-      totalDevicesLogados: uniqueTokens.length,
+      totalDevicesLogados,
+      tokensAniversariantes: tokensAniversariantes.length,
+      tokensOutros: tokensOutros.length,
+      totalMensagens,
       message: modoTeste
-        ? "Modo teste: tokens identificados."
-        : "Notificação enviada para todos os devices logados.",
+        ? "Modo teste: tokens separados e mensagens montadas."
+        : "Notificações enviadas: personalizada para aniversariantes e geral para os demais.",
     });
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Erro desconhecido";
