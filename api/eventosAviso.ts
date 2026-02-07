@@ -70,11 +70,18 @@ export default async function eventosAvisoHandler(_req: Request, res: Response) 
       return res.status(200).json({ message: "Nenhum evento agendado." });
     }
 
-    const eventos = snapshot.docs.map((doc) => doc.data());
+    // ✅ agora inclui o id do doc (necessário para marcar "já avisado")
+    const eventos = snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
 
     for (const evento of eventos) {
       if (!evento.data || !evento.horario) {
         console.log("⚠️ Evento ignorado: dados incompletos.");
+        continue;
+      }
+
+      // ✅ dedupe: se já avisou, não manda de novo
+      if (evento.aviso2hEnviadoEm) {
+        console.log("↩️ Já avisado (2h) — pulando:", evento.id);
         continue;
       }
 
@@ -91,10 +98,7 @@ export default async function eventosAvisoHandler(_req: Request, res: Response) 
 
       const [hora, minuto] = String(evento.horario).trim().split(":").map(Number);
 
-      if (
-        isNaN(dia) || isNaN(mes) || isNaN(ano) ||
-        isNaN(hora) || isNaN(minuto)
-      ) {
+      if (isNaN(dia) || isNaN(mes) || isNaN(ano) || isNaN(hora) || isNaN(minuto)) {
         console.log("⚠️ Evento ignorado: data ou horário inválido.");
         continue;
       }
@@ -114,11 +118,17 @@ export default async function eventosAvisoHandler(_req: Request, res: Response) 
       console.log(`🗓️ Data completa interpretada: ${dataEvento.toLocaleString("pt-BR")}`);
       console.log(`⏱️ Diferença em minutos: ${diff.toFixed(2)}`);
 
+      // ✅ evento já passou -> não processa
+      if (diff < 0) {
+        console.log("⏪ Evento já passou — ignorando.");
+        continue;
+      }
+
       // ✅ janela original
       if (diff >= 115 && diff <= 125) {
         console.log("✅ Evento dentro do intervalo de envio de notificação!");
 
-        // ✅ AGORA: pega tokens de TODOS os DEVICES LOGADOS em push_devices
+        // pega tokens de TODOS os DEVICES LOGADOS em push_devices
         const devicesSnap = await admin
           .firestore()
           .collection("push_devices")
@@ -148,6 +158,18 @@ export default async function eventosAvisoHandler(_req: Request, res: Response) 
 
         const expoResult = await sendExpoInChunks(messages);
         console.log("📨 Notificações enviadas (chunks):", expoResult.length);
+
+        // ✅ marca como "já avisado" para não duplicar em execuções futuras
+        await admin
+          .firestore()
+          .collection("eventos")
+          .doc(evento.id)
+          .set(
+            { aviso2hEnviadoEm: admin.firestore.FieldValue.serverTimestamp() },
+            { merge: true }
+          );
+
+        console.log("✅ aviso2hEnviadoEm salvo no evento:", evento.id);
       } else {
         console.log("❌ Fora do intervalo.");
       }

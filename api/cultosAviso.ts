@@ -58,7 +58,8 @@ export default async function cultosAvisoHandler(_req: Request, res: Response) {
   console.log("🔔 Verificando cultos para avisar...");
 
   const agora = new Date();
-  agora.setHours(agora.getHours() - 3); // Ajuste para UTC-3 (mantive seu padrão)
+  // Mantendo seu padrão: ajustar manualmente para UTC-3
+  agora.setHours(agora.getHours() - 3);
   console.log("🕓 Agora (ajustada):", agora.toLocaleString("pt-BR"));
 
   try {
@@ -70,7 +71,11 @@ export default async function cultosAvisoHandler(_req: Request, res: Response) {
       return res.status(200).json({ message: "Nenhum culto agendado." });
     }
 
-    const cultos = snapshot.docs.map((doc) => doc.data());
+    // ✅ IMPORTANTÍSSIMO: incluir id do doc (para marcar aviso enviado)
+    const cultos = snapshot.docs.map((d) => ({
+      id: d.id,
+      ...(d.data() as any),
+    }));
 
     for (const culto of cultos) {
       if (!culto.data || !culto.horario) {
@@ -78,8 +83,15 @@ export default async function cultosAvisoHandler(_req: Request, res: Response) {
         continue;
       }
 
+      // ✅ DEDUPE: se já avisou esse culto, não envia de novo
+      if (culto.aviso2hEnviadoEm) {
+        console.log("↩️ Culto já avisado (2h). Pulando:", culto.id);
+        continue;
+      }
+
       // Interpretação da data
       let ano: number, mes: number, dia: number;
+
       if (typeof culto.data === "string" && culto.data.includes("/")) {
         [dia, mes, ano] = culto.data.trim().split("/").map(Number);
       } else if (typeof culto.data === "string" && culto.data.includes("-")) {
@@ -92,8 +104,11 @@ export default async function cultosAvisoHandler(_req: Request, res: Response) {
       const [hora, minuto] = String(culto.horario).trim().split(":").map(Number);
 
       if (
-        isNaN(dia) || isNaN(mes) || isNaN(ano) ||
-        isNaN(hora) || isNaN(minuto)
+        isNaN(dia) ||
+        isNaN(mes) ||
+        isNaN(ano) ||
+        isNaN(hora) ||
+        isNaN(minuto)
       ) {
         console.log("⚠️ Culto ignorado: data ou horário inválido.");
         continue;
@@ -114,11 +129,16 @@ export default async function cultosAvisoHandler(_req: Request, res: Response) {
       console.log(`🗓️ Data completa interpretada: ${dataCulto.toLocaleString("pt-BR")}`);
       console.log(`⏱️ Diferença em minutos: ${diff.toFixed(2)}`);
 
-      // ✅ janela original
+      // ✅ se já passou, ignora
+      if (diff < 0) {
+        continue;
+      }
+
+      // ✅ janela original (2h antes)
       if (diff >= 115 && diff <= 125) {
         console.log("✅ Culto dentro do intervalo de envio de notificação!");
 
-        // ✅ AGORA: pega tokens de TODOS os DEVICES LOGADOS em push_devices
+        // pega tokens de TODOS os DEVICES LOGADOS em push_devices
         const devicesSnap = await admin
           .firestore()
           .collection("push_devices")
@@ -148,6 +168,20 @@ export default async function cultosAvisoHandler(_req: Request, res: Response) {
 
         const expoResult = await sendExpoInChunks(messages);
         console.log("📨 Notificações enviadas (chunks):", expoResult.length);
+
+        // ✅ MARCA COMO AVISADO (pra não duplicar no próximo cron)
+        await admin
+          .firestore()
+          .collection("cultos")
+          .doc(culto.id)
+          .set(
+            {
+              aviso2hEnviadoEm: admin.firestore.FieldValue.serverTimestamp(),
+            },
+            { merge: true }
+          );
+
+        console.log("✅ aviso2hEnviadoEm salvo no culto:", culto.id);
       } else {
         console.log("❌ Fora do intervalo.");
       }
