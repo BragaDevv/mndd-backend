@@ -41,6 +41,7 @@ import { versiculoDiaHandler } from "./versiculoDia";
 import spotifyHandler from "./spotify";
 import rankingHandler from "./ranking";
 import cultosAvisoHandler from "./cultosAviso";
+import eventosAvisoHandler from "./eventosAviso";
 import cifraHandler from "./cifra";
 import { salvarDevocionalDiario } from "./saveDevocionalDiario";
 import { extrairEstudoHandler } from "./extrairEstudo";
@@ -101,8 +102,12 @@ app.post("/set-claim-admin", setClaimAdmin);
 //
 // ... após app.use(bodyParser.json()) etc.
 app.post("/notify/owner/user-created", notificarOwnerUsuarioCriado);
+
 // ✅ ROTA Notif Cultos
 app.get("/cultos/avisar", cultosAvisoHandler);
+
+// ✅ ROTA Notif Eventos
+app.get("/eventos/avisar", eventosAvisoHandler);
 
 // ✅ ROTA Spotify
 app.get("/spotify/louvores", spotifyHandler);
