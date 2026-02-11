@@ -43,15 +43,16 @@ router.post("/admin/crossword/seed", async (req: Request, res: Response) => {
     const weekId = String(req.body?.weekId ?? "TESTE-001");
     const title = String(req.body?.title ?? "Cruzada – Evangelhos");
 
-    const grid = [
-      ["#","#","#","#","#","#","#"],
-      ["#","#",".",".",".",".","#"],
-      ["#","#",".","#","#","#","#"],
-      ["#","#",".",".",".","#","#"],
-      ["#",".",".",".","#","#","#"],
-      ["#",".",".",".",".","#","#"],
-      ["#",".","#","#","#","#","#"],
-    ];
+const gridRows = [
+  "#######",
+  "##....#",
+  "##.####",
+  "##...##",
+  "#...###",
+  "#....##",
+  "#.#####",
+];
+
 
     const entries = [
       { number: 1, direction: "across", row: 1, col: 2, answer: "JOAO",  clue: "Apóstolo e autor de um Evangelho" },
@@ -62,16 +63,17 @@ router.post("/admin/crossword/seed", async (req: Request, res: Response) => {
       { number: 4, direction: "across", row: 5, col: 2, answer: "SIM",   clue: "Resposta afirmativa" },
     ];
 
-    const payload = {
-      weekId,
-      title,
-      size: 7,
-      published: true,
-      grid,
-      entries,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    };
+ const payload = {
+  weekId,
+  title,
+  size: 7,
+  published: true,
+  gridRows, // ✅ em vez de grid
+  entries,
+  createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+};
+
 
     await admin.firestore().collection("crosswords").doc(weekId).set(payload, { merge: true });
 
