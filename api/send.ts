@@ -81,6 +81,8 @@ import openaiRouter from "./openai";
 
 import pexelsHandler from "./pexels";
 
+import crosswordSeedRouter from "./crosswordSeed";
+
 
 // =====================================================
 // 🚀 APP
@@ -187,6 +189,9 @@ app.use("/", notificacaoIA);
 app.use("/api/openai", openaiRouter);
 app.use("/api/openai", resumoCapituloRouter);
 
+//
+
+app.use("/api", crosswordSeedRouter);
 
 // =====================================================
 // ⏰ CRON JOBS (PADRONIZADOS COM TIMEZONE SP)
