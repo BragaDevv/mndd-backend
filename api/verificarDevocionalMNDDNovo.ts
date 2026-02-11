@@ -32,6 +32,43 @@ function intervaloHojeSP() {
   };
 }
 
+// ============================
+// ✅ MESMA LÓGICA DO VERSÍCULO
+// ============================
+
+function isValidExpoToken(t: any): t is string {
+  return (
+    typeof t === "string" &&
+    (t.startsWith("ExpoPushToken[") || t.startsWith("ExponentPushToken["))
+  );
+}
+
+function safeBody(input: string, max = 220) {
+  const s = (input ?? "").toString().trim();
+  if (s.length <= max) return s;
+  return s.slice(0, max - 1) + "…";
+}
+
+// limita concorrência pra não estourar o Firestore
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length) as any;
+  let i = 0;
+
+  const workers = new Array(Math.min(limit, items.length)).fill(0).map(async () => {
+    while (i < items.length) {
+      const idx = i++;
+      results[idx] = await fn(items[idx], idx);
+    }
+  });
+
+  await Promise.all(workers);
+  return results;
+}
+
 /** Verifica se existe devocional MNDD para hoje e envia notificação se existir */
 export async function verificarDevocionalMNDDNovo() {
   const db = admin.firestore();
@@ -44,14 +81,12 @@ export async function verificarDevocionalMNDDNovo() {
   // 1️⃣ Consulta pelo campo 'data'
   try {
     const snap = await col.where("data", "==", hojeISO).limit(1).get();
-    if (!snap.empty) {
-      docEncontrado = snap.docs[0];
-    }
+    if (!snap.empty) docEncontrado = snap.docs[0];
   } catch (err) {
     console.warn("⚠️ Erro na consulta por 'data':", err);
   }
 
-  // 2️⃣ Consulta pelo intervalo em 'createdAt' (caso não tenha achado pelo campo 'data')
+  // 2️⃣ Consulta pelo intervalo em 'createdAt' (fallback)
   if (!docEncontrado) {
     try {
       const snap = await col
@@ -59,9 +94,7 @@ export async function verificarDevocionalMNDDNovo() {
         .where("createdAt", "<=", fim)
         .limit(1)
         .get();
-      if (!snap.empty) {
-        docEncontrado = snap.docs[0];
-      }
+      if (!snap.empty) docEncontrado = snap.docs[0];
     } catch (err) {
       console.warn("⚠️ Erro na consulta por 'createdAt':", err);
     }
@@ -72,53 +105,114 @@ export async function verificarDevocionalMNDDNovo() {
     return { existeHoje: false };
   }
 
-  const data = docEncontrado.data();
-  console.log(`✅ Devocional encontrado: "${data.titulo}"`);
+  const data = docEncontrado.data() as any;
+  console.log(`✅ Devocional encontrado: "${data.titulo ?? "(sem título)"}"`);
 
-  // 🚀 Buscar todos os tokens dos usuários
-  const snapshotUsuarios = await db.collection("usuarios").get();
-  const tokens = snapshotUsuarios.docs
-    .map((doc) => doc.data().expoToken)
-    .filter(
-      (t) => typeof t === "string" && t.startsWith("ExponentPushToken")
-    );
+  // ============================
+  // ✅ BUSCAR TOKENS DOS DEVICES LOGADOS (igual versículo)
+  // ============================
 
-  if (tokens.length === 0) {
-    console.warn("⚠️ Nenhum token válido encontrado para envio do devocional.");
+  console.log("[DEVOCIONAL] buscando usuarios...");
+  const usersSnap = await db.collection("usuarios").get();
+  console.log("[DEVOCIONAL] usuarios encontrados:", usersSnap.size);
+
+  const uids = usersSnap.docs.map((d) => d.id);
+
+  console.log("[DEVOCIONAL] buscando devices logados por usuario (sem collectionGroup)...");
+  const tokensNested = await mapWithConcurrency(uids, 10, async (uid) => {
+    const devSnap = await db
+      .collection("usuarios")
+      .doc(uid)
+      .collection("devices")
+      .where("isLoggedIn", "==", true)
+      .get();
+
+    return devSnap.docs.map((d) => d.data()?.expoToken).filter(isValidExpoToken);
+  });
+
+  const tokens = tokensNested.flat();
+  const uniqueTokens = Array.from(new Set(tokens));
+  console.log("[DEVOCIONAL] tokens validos (unicos):", uniqueTokens.length);
+
+  if (uniqueTokens.length === 0) {
+    console.warn("⚠️ Nenhum token válido encontrado (devices logados).");
     return { existeHoje: true, enviouNotificacao: false, motivo: "sem_tokens" };
   }
 
   // 📜 Montar mensagem com primeiro parágrafo do conteúdo
   const primeiroParagrafo =
     Array.isArray(data.paragrafos) && data.paragrafos.length > 0
-      ? data.paragrafos[0]
-      : (data.conteudo?.split("\n")[0] || "");
+      ? String(data.paragrafos[0] ?? "")
+      : String(data.conteudo?.split("\n")[0] ?? "");
 
-  const messages = tokens.map((token) => ({
+  const body = safeBody(
+    `${primeiroParagrafo}${data.referencia ? ` (${data.referencia})` : ""}`,
+    220
+  );
+
+  const title = safeBody(`📖 Devocional: ${data.titulo || "Novo Devocional"}`, 60);
+
+  const messages = uniqueTokens.map((token) => ({
     to: token,
     sound: "default",
-    title: `📖 Devocional: ${data.titulo || "Novo Devocional"}`,
-    body: `${primeiroParagrafo} (${data.referencia || ""})`,
+    title,
+    body,
+    data: {
+      type: "devocional",
+      devocionalId: docEncontrado!.id,
+      dataISO: hojeISO,
+    },
   }));
 
-  // 📤 Enviar notificações via Expo
+  // 📤 Enviar notificações via Expo (em chunks de 100, igual versículo)
+  const chunkSize = 100;
+  const results: any[] = [];
+
   try {
-    const expoResponse = await fetch("https://exp.host/--/api/v2/push/send", {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Accept-Encoding": "gzip, deflate",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(messages),
-    });
+    for (let i = 0; i < messages.length; i += chunkSize) {
+      const chunk = messages.slice(i, i + chunkSize);
 
-    const expoResult = await expoResponse.json();
-    console.log("📤 Notificação enviada:", expoResult);
+      console.log(
+        `[DEVOCIONAL] enviando chunk ${Math.floor(i / chunkSize) + 1}/${Math.ceil(
+          messages.length / chunkSize
+        )} (${chunk.length} msgs)`
+      );
 
-    return { existeHoje: true, enviouNotificacao: true, id: docEncontrado.id };
+      const expoResponse = await fetch("https://exp.host/--/api/v2/push/send", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Accept-Encoding": "gzip, deflate",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(chunk),
+      });
+
+      const status = expoResponse.status;
+      const payload = await expoResponse.json().catch(async () => ({
+        error: "non-json-response",
+        status,
+        raw: (await expoResponse.text()).slice(0, 500),
+      }));
+
+      if (status < 200 || status >= 300) {
+        console.error("[DEVOCIONAL] Expo retornou erro:", status, payload);
+      }
+
+      results.push({ status, payload });
+    }
+
+    console.log("📤 Notificação devocional enviada (chunks).");
+
+    return {
+      existeHoje: true,
+      enviouNotificacao: true,
+      id: docEncontrado.id,
+      sent: uniqueTokens.length,
+      expoResult: results,
+    };
   } catch (error) {
-    console.error("❌ Erro ao enviar notificação:", error);
+    console.error("❌ Erro ao enviar notificação devocional:", error);
     return { existeHoje: true, enviouNotificacao: false, erro: String(error) };
   }
 }

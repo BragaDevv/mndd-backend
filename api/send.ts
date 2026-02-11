@@ -1,16 +1,20 @@
-
 import express, { Request, Response } from "express";
 import admin from "firebase-admin";
 import bodyParser from "body-parser";
 import dotenv from "dotenv";
 import fetch from "node-fetch";
-import OpenAI from "openai";
 import cron from "node-cron";
 
 dotenv.config();
-console.log("🔐 Pexels Key:", process.env.PEXELS_API_KEY);
 
-// 🔐 Inicialização do Firebase Admin (ANTES dos imports de rotas)
+// =====================================================
+// ✅ LOGS DE ENV (opcional, mas útil)
+// =====================================================
+console.log("🔐 Pexels Key:", process.env.PEXELS_API_KEY ? "OK" : "NÃO DEFINIDA");
+
+// =====================================================
+// 🔐 FIREBASE ADMIN INIT (ANTES DOS IMPORTS DE ROTAS)
+// =====================================================
 const jsonString = process.env.GOOGLE_CREDENTIALS;
 if (!jsonString) {
   console.error("❌ GOOGLE_CREDENTIALS não definida.");
@@ -32,49 +36,78 @@ if (!admin.apps.length) {
   console.log("✅ Firebase Admin inicializado.");
 }
 
-// ⬇️ Agora sim: importe os handlers/rotas que podem usar admin.firestore()
+// =====================================================
+// ⬇️ IMPORTS DE ROTAS / HANDLERS (AGORA PODEM USAR FIRESTORE)
+// =====================================================
 import sendNotificationRouter from "./sendNotification";
+
 import versiculoHoraHandler from "./versiculoHora";
 import versiculoHandler from "./versiculo";
 import { checarEnviarVersiculo } from "./versiculoCron";
 import { versiculoDiaHandler } from "./versiculoDia";
+
 import spotifyHandler from "./spotify";
 import rankingHandler from "./ranking";
+
 import cultosAvisoHandler from "./cultosAviso";
 import eventosAvisoHandler from "./eventosAviso";
+
 import cifraHandler from "./cifra";
+
 import { salvarDevocionalDiario } from "./saveDevocionalDiario";
-import { extrairEstudoHandler } from "./extrairEstudo";
-import aniversariantesHandler from "./aniversariantes";
-import redefinirSenhaHandler from "./redefinirSenha";
-import pexelsHandler from "./pexels";
-import cortarAssinaturaHandler from "./cortarAssinatura";
-import criarUsuarioHandler from "./criarUsuario";
-import listarUsuariosHandler from "./listarUsuarios";
-import excluirUsuarioHandler from "./excluirUsuario";
-import setClaimAdmin from "./setClaimAdmin";
 import {
   verificarDevocionalMNDDNovo,
   hojeSP_ISO,
 } from "./verificarDevocionalMNDDNovo";
-import notificacaoIA from "./notificacaoIA";
-import notificarOwnerUsuarioCriado from "./notificarOwnerUsuarioCriado";
-import resumoCapituloRouter from "./resumoCapitulo";
+
+import { extrairEstudoHandler } from "./extrairEstudo";
 import { renderEstudoCloudinary } from "./renderEstudoCloudinary";
 
+import aniversariantesHandler from "./aniversariantes";
+
+import redefinirSenhaHandler from "./redefinirSenha";
+import cortarAssinaturaHandler from "./cortarAssinatura";
+
+import criarUsuarioHandler from "./criarUsuario";
+import listarUsuariosHandler from "./listarUsuarios";
+import excluirUsuarioHandler from "./excluirUsuario";
+import setClaimAdmin from "./setClaimAdmin";
+
+import notificacaoIA from "./notificacaoIA";
+import notificarOwnerUsuarioCriado from "./notificarOwnerUsuarioCriado";
+
+import resumoCapituloRouter from "./resumoCapitulo";
+import openaiRouter from "./openai";
+
+import pexelsHandler from "./pexels";
+
+
+// =====================================================
+// 🚀 APP
+// =====================================================
 const app = express();
 app.use(bodyParser.json({ limit: "3mb" }));
 
-// ✅ Notifcação Manual
+// =====================================================
+// 🌎 CONSTANTES
+// =====================================================
+const TZ = "America/Sao_Paulo";
+
+// =====================================================
+// ✅ ROTAS - NOTIFICAÇÃO MANUAL
+// =====================================================
 app.use("/", sendNotificationRouter);
 
-// ✅ Versículo do Dia - manual
+// =====================================================
+// ✅ ROTAS - VERSÍCULO
+// =====================================================
+// Versículo do Dia (manual)
 app.post("/versiculo", versiculoHandler);
 
-// ✅ Salvar horário do versículo (POST e GET)
+// Salvar horário do versículo (POST e GET)
 app.all("/versiculo-hora", versiculoHoraHandler);
 
-// ✅ Apenas GET (para segurança e fallback)
+// Apenas GET (para segurança e fallback)
 app.get("/versiculo-hora", async (_req, res) => {
   try {
     const doc = await admin
@@ -82,71 +115,108 @@ app.get("/versiculo-hora", async (_req, res) => {
       .collection("configuracoes")
       .doc("versiculo")
       .get();
+
     const data = doc.data();
-    if (data?.hora) {
-      return res.status(200).json({ hora: data.hora });
-    } else {
-      return res.status(404).json({ error: "Horário não encontrado" });
-    }
+    if (data?.hora) return res.status(200).json({ hora: data.hora });
+    return res.status(404).json({ error: "Horário não encontrado" });
   } catch (error) {
     return res.status(500).json({ error: "Erro ao buscar horário" });
   }
 });
 
-//✅ ROTA Usuario ADM
+// Versículo do dia (GET) - usado no app
+app.get("/api/versiculo-dia", versiculoDiaHandler);
+
+// Rota auxiliar para forçar checagem do versículo (debug)
+app.get("/checar", async (_req, res) => {
+  await checarEnviarVersiculo();
+  return res.send("Versículo checado.");
+});
+
+// =====================================================
+// ✅ ROTAS - USUÁRIOS ADM (Firebase Auth)
+// =====================================================
 app.post("/criar-usuario", criarUsuarioHandler);
 app.get("/listar-usuarios", listarUsuariosHandler);
 app.delete("/excluir-usuario", excluirUsuarioHandler);
 app.post("/redefinir-senha", redefinirSenhaHandler);
 app.post("/set-claim-admin", setClaimAdmin);
-//
-// ... após app.use(bodyParser.json()) etc.
+
+// Notificar owner quando usuário é criado
 app.post("/notify/owner/user-created", notificarOwnerUsuarioCriado);
 
-// ✅ ROTA Notif Cultos
+// =====================================================
+// ✅ ROTAS - CULTOS / EVENTOS
+// =====================================================
 app.get("/cultos/avisar", cultosAvisoHandler);
-
-// ✅ ROTA Notif Eventos
 app.get("/eventos/avisar", eventosAvisoHandler);
 
-// ✅ ROTA Spotify
+// =====================================================
+// ✅ ROTAS - SPOTIFY / CIFRAS / RANKING
+// =====================================================
 app.get("/spotify/louvores", spotifyHandler);
-
-// ✅ ROTA Cifra
-app.all("/cifras", cifraHandler); // cuida de GET e POST (mais flexível)
-
-// ✅ ROTA Ranking
+app.all("/cifras", cifraHandler);
 app.get("/ranking/check", rankingHandler);
 
-// ✅ ROTA IMAGENS ALEATORIAS
+// =====================================================
+// ✅ ROTAS - PEXELS / ASSINATURA / ESTUDO
+// =====================================================
 app.get("/api/pexels", pexelsHandler);
 
-// ✅ ROTA Corte Assinatura
 app.use("/api", cortarAssinaturaHandler);
 
-// ✅ ROTA Estudo
 app.post("/api/extrair-estudo", extrairEstudoHandler);
-app.get("/api/extrair-estudo", extrairEstudoHandler); // ✅ adiciona suporte a GET
+app.get("/api/extrair-estudo", extrairEstudoHandler);
 
-// ✅ Nova rota
 app.post("/api/render-estudo", renderEstudoCloudinary);
 
-// DEVOCIONAL - Executa todo dia às 8:05h da manhã (horário de São Paulo)
+// =====================================================
+// ✅ ROTAS - ANIVERSARIANTES
+// =====================================================
+app.post("/aniversariantes", aniversariantesHandler);
+
+// =====================================================
+// ✅ ROTAS - NOTIF IA (as que você já tem)
+// =====================================================
+app.use("/", notificacaoIA);
+
+// =====================================================
+// ✅ OPENAI
+// =====================================================
+
+app.use("/api/openai", openaiRouter);
+app.use("/api/openai", resumoCapituloRouter);
+
+
+// =====================================================
+// ⏰ CRON JOBS (PADRONIZADOS COM TIMEZONE SP)
+// =====================================================
+
+/**
+ * DEVOCIONAL IA — gera/salva devocional automaticamente
+ * ⏰ Todo dia às 08:05 (SP)
+ */
 cron.schedule(
   "5 8 * * *",
   async () => {
-    console.log("⏰ Rodando tarefa de devocional diário IA");
-    await salvarDevocionalDiario();
+    console.log("⏰ [CRON] Rodando devocional diário IA (08:05 SP)...");
+    try {
+      await salvarDevocionalDiario();
+      console.log("✅ [CRON] Devocional IA gerado/salvo com sucesso.");
+    } catch (err) {
+      console.error("❌ [CRON] Erro ao gerar/salvar devocional IA:", err);
+    }
   },
-  {
-    timezone: "America/Sao_Paulo",
-  }
+  { timezone: TZ }
 );
 
-/** Devocional IA — rodar manualmente (sem proteção)  https://mndd-backend.onrender.com/cron/devocional/run   */
+/**
+ * DEVOCIONAL IA — rodar manualmente (debug)
+ * https://mndd-backend.onrender.com/cron/devocional/run
+ */
 app.all("/cron/devocional/run", async (_req: Request, res: Response) => {
   try {
-    await salvarDevocionalDiario(); // executa AGORA
+    await salvarDevocionalDiario();
     return res.json({ ok: true, ranAt: new Date().toISOString() });
   } catch (err: any) {
     console.error("❌ Erro ao rodar devocional manual:", err);
@@ -154,121 +224,87 @@ app.all("/cron/devocional/run", async (_req: Request, res: Response) => {
   }
 });
 
-/** Devocional MNDD MANUAL */
-app.get(
-  "/cron/verificar-devocional-mndd",
-  async (_req: Request, res: Response) => {
-    try {
-      const resultado = await verificarDevocionalMNDDNovo();
-      res.json({ ok: true, dataHoje: hojeSP_ISO(), ...resultado });
-    } catch (err) {
-      console.error("❌ Erro na verificação:", err);
-      res.status(500).json({ ok: false, error: String(err) });
-    }
+/**
+ * DEVOCIONAL MNDD — verificação + envio de notificação (manual)
+ * (checa se existe devocional do dia e notifica)
+ */
+app.get("/cron/verificar-devocional-mndd", async (_req: Request, res: Response) => {
+  try {
+    const resultado = await verificarDevocionalMNDDNovo();
+    res.json({ ok: true, dataHoje: hojeSP_ISO(), ...resultado });
+  } catch (err) {
+    console.error("❌ Erro na verificação devocional MNDD:", err);
+    res.status(500).json({ ok: false, error: String(err) });
   }
-);
+});
 
-/** ⏰ Devocional MNDD AGENDAMENTO diário às 08:10 SP */
+/**
+ * DEVOCIONAL MNDD — agendamento de notificação
+ * ⏰ Todo dia às 08:10 (SP)
+ * (roda após o devocional IA das 08:05, dando 5 min de margem)
+ */
 cron.schedule(
   "10 8 * * *",
   async () => {
-    console.log("⏰ Verificando devocional MNDD (SP 08:10)...");
-    const resultado = await verificarDevocionalMNDDNovo();
-    console.log("📋 Resultado:", resultado);
+    console.log("⏰ [CRON] Verificando devocional MNDD (08:10 SP)...");
+    try {
+      const resultado = await verificarDevocionalMNDDNovo();
+      console.log("📋 [CRON] Resultado devocional MNDD:", resultado);
+    } catch (err) {
+      console.error("❌ [CRON] Erro ao verificar/enviar devocional MNDD:", err);
+    }
   },
-  { timezone: "America/Sao_Paulo" }
+  { timezone: TZ }
 );
 
-//ROTA Aniversário
-app.post("/aniversariantes", aniversariantesHandler);
-// 🎉 Agendar envio de notificações de aniversariantes às 10h
-cron.schedule("0 13 * * *", async () => {
-  console.log("⏰ Rodando tarefa de aniversariantes do dia");
-  try {
-    await fetch("https://mndd-backend.onrender.com/aniversariantes", {
-      method: "POST",
-    });
+/**
+ * ANIVERSARIANTES — envio diário das notificações
+ * ⏰ Todo dia às 13:00 (SP)
+ *
+ * OBS: antes não tinha timezone; agora padronizado.
+ */
+cron.schedule(
+  "0 13 * * *",
+  async () => {
+    console.log("⏰ [CRON] Rodando aniversariantes do dia (13:00 SP)...");
+    try {
+      await fetch("https://mndd-backend.onrender.com/aniversariantes", {
+        method: "POST",
+      });
+      console.log("✅ [CRON] Notificações de aniversário enviadas.");
+    } catch (error) {
+      console.error("❌ [CRON] Erro ao enviar aniversariantes:", error);
+    }
+  },
+  { timezone: TZ }
+);
 
-    console.log("✅ Notificações de aniversário enviadas.");
-  } catch (error) {
-    console.error("❌ Erro ao enviar notificações de aniversário:", error);
-  }
-});
+/**
+ * RANKING — checagem diária
+ * ⏰ Todo dia às 15:00 (SP)
+ *
+ * OBS: antes dizia "12h Brasília" mas era 15:00 e sem timezone.
+ * Agora está claro e consistente.
+ */
+cron.schedule(
+  "0 15 * * *",
+  async () => {
+    console.log("⏰ [CRON] Rodando checagem de ranking (15:00 SP)...");
+    try {
+      const response = await fetch("https://mndd-backend.onrender.com/ranking/check");
+      const data = await response.text();
+      console.log("✅ [CRON] Resultado ranking:", data);
+    } catch (error) {
+      console.error("❌ [CRON] Erro ao checar ranking:", error);
+    }
+  },
+  { timezone: TZ }
+);
 
-// 🏆 Agendamento diário da verificação do ranking às 12h (Brasília)
-cron.schedule("0 15 * * *", async () => {
-  console.log("⏰ Rodando tarefa de checagem de ranking...");
-
-  try {
-    const response = await fetch(
-      "https://mndd-backend.onrender.com/ranking/check"
-    );
-    const data = await response.text();
-
-    console.log("✅ Resultado da execução do ranking:", data);
-  } catch (error) {
-    console.error("❌ Erro ao executar checagem de ranking:", error);
-  }
-});
-
-// ✅ ROTA auxiliar para forçar a checagem externa
-app.get("/checar", async (_req, res) => {
-  await checarEnviarVersiculo();
-  return res.send("Versículo checado.");
-});
-
-// ✅ ROTA GET VERSICULO DO DIA
-app.get("/api/versiculo-dia", versiculoDiaHandler);
-
-//NOTIF IA
-app.use("/", notificacaoIA);
-
-// ✅ Integração com OpenAI protegida
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || "",
-});
-
-app.use("/api/openai", resumoCapituloRouter);
-
-app.post("/api/openai/ask", async (req: Request, res: Response) => {
-  const { prompt } = req.body;
-
-  if (!prompt) {
-    return res.status(400).json({ error: "Prompt obrigatório." });
-  }
-
-  try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        {
-          role: "system",
-          content:
-            "Você é um assistente bíblico cristão do Ministério Nascido de Deus (MNDD). " +
-            "Responda de forma clara, simples e acolhedora, citando versículos quando apropriado. " +
-            "Mantenha-se estritamente no contexto bíblico. " +
-            "Se perguntarem sobre cultos ou eventos da igreja, informe que pode verificar os próximos eventos. " +
-            "Para informações sobre cultos, diga apenas: 'Por favor, pergunte especificamente sobre os cultos para que eu possa verificar.'",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      temperature: 0.7,
-      max_tokens: 500,
-    });
-
-    const result = completion.choices[0]?.message?.content;
-    return res.status(200).json({ result });
-  } catch (error) {
-    console.error("Erro ao consultar OpenAI:", error);
-    return res.status(500).json({ error: "Erro ao consultar OpenAI." });
-  }
-});
-
-// 🚀 Inicializa o servidor
+// =====================================================
+// 🚀 START SERVER
+// =====================================================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 API rodando na porta ${PORT}`);
+  console.log(`🚀 API rodando na porta ${PORT} (TZ=${TZ})`);
 });
