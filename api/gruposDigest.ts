@@ -62,7 +62,7 @@ async function sendExpoPush(
   }
 }
 
-async function getLastMessageAt(grupoId: GroupId) {
+async function getLastMessageAt(grupoId: string) {
   const snap = await db
     .collection("grupos")
     .doc(grupoId)
@@ -71,8 +71,10 @@ async function getLastMessageAt(grupoId: GroupId) {
     .limit(1)
     .get();
 
-  const doc = snap.docs[0];
-  const ts = doc?.get("timestamp");
+  const d = snap.docs[0];
+  if (!d) return null;
+
+  const ts = d.get("timestamp") || d.get("createdAt");
   return ts?.toDate ? ts.toDate() : null;
 }
 
@@ -87,8 +89,7 @@ async function getGroupUserUids(grupoId: GroupId) {
 async function getTokensByUids(uids: string[]) {
   if (!uids.length) return [];
 
-  // Firestore "in" suporta até 10 por vez → chunk
-  const chunkSize = 10;
+  const chunkSize = 10; // limite do "in"
   const chunks: string[][] = [];
   for (let i = 0; i < uids.length; i += chunkSize)
     chunks.push(uids.slice(i, i + chunkSize));
@@ -101,18 +102,25 @@ async function getTokensByUids(uids: string[]) {
       .where("uid", "in", chunk)
       .get();
 
+    console.log(`📲 push_devices encontrados (chunk): ${devSnap.size}`);
+
     devSnap.forEach((d) => {
       const t = d.get("expoToken");
-      if (isExpoToken(t)) tokens.push(t);
+      if (typeof t === "string" && t.startsWith("ExponentPushToken")) {
+        tokens.push(t);
+      }
     });
   }
 
-  // remove duplicados
-  return Array.from(new Set(tokens));
+  const unique = Array.from(new Set(tokens));
+  console.log(`✅ tokens válidos: ${unique.length}`);
+  return unique;
 }
 
 async function runDigestForGroup(grupoId: GroupId) {
+  console.log(`\n--- grupo=${grupoId} ---`);
   const lastMsgAt = await getLastMessageAt(grupoId);
+  console.log("lastMsgAt:", lastMsgAt?.toISOString?.() ?? null);
   if (!lastMsgAt) return;
 
   const stateRef = db.collection("notifs_grupo_state").doc(grupoId);
@@ -121,13 +129,19 @@ async function runDigestForGroup(grupoId: GroupId) {
   const lastNotifiedMsgAt: Date | null = stateSnap.exists
     ? (stateSnap.get("lastNotifiedMsgAt")?.toDate?.() ?? null)
     : null;
+  console.log("lastNotifiedMsgAt:", lastNotifiedMsgAt?.toISOString?.() ?? null);
 
   // Se não tem msg nova desde o último push, sai
-  if (lastNotifiedMsgAt && lastMsgAt <= lastNotifiedMsgAt) return;
-
+  if (!lastMsgAt) return;
+  if (lastNotifiedMsgAt && lastMsgAt <= lastNotifiedMsgAt) {
+    console.log("⏭️ sem msg nova (não notifica)");
+    return;
+  }
   // Busca todos os usuários do grupo e tokens
   const uids = await getGroupUserUids(grupoId);
+  console.log("uids do grupo:", uids.length);
   const tokens = await getTokensByUids(uids);
+  console.log("tokens:", tokens.length);
 
   if (tokens.length) {
     await sendExpoPush(
