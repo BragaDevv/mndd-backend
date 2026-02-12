@@ -4,16 +4,16 @@ import cron from "node-cron";
 const db = admin.firestore();
 
 const GROUPS = [
-  "louvor",
-  "amareservir",
-  "varoes",
-  "guerreiras",
-  "adolescentes",
-  "danca",
-  "geracao",
-  "obreiros",
-  "infantil",
-  "midia",
+  "Louvor",
+  "Amar&Servir",
+  "Varões",
+  "Guerreiras",
+  "Adolescentes",
+  "Dança",
+  "Geração",
+  "Obreiros",
+  "Infantil",
+  "Midia",
 ] as const;
 
 type GroupId = (typeof GROUPS)[number];
