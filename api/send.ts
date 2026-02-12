@@ -10,7 +10,10 @@ dotenv.config();
 // =====================================================
 // ✅ LOGS DE ENV (opcional, mas útil)
 // =====================================================
-console.log("🔐 Pexels Key:", process.env.PEXELS_API_KEY ? "OK" : "NÃO DEFINIDA");
+console.log(
+  "🔐 Pexels Key:",
+  process.env.PEXELS_API_KEY ? "OK" : "NÃO DEFINIDA",
+);
 
 // =====================================================
 // 🔐 FIREBASE ADMIN INIT (ANTES DOS IMPORTS DE ROTAS)
@@ -83,6 +86,8 @@ import pexelsHandler from "./pexels";
 
 import crosswordSeedRouter from "./crosswordSeed";
 
+import { startGroupsDigestCron } from "./gruposDigest";
+startGroupsDigestCron();
 
 // =====================================================
 // 🚀 APP
@@ -212,7 +217,7 @@ cron.schedule(
       console.error("❌ [CRON] Erro ao gerar/salvar devocional IA:", err);
     }
   },
-  { timezone: TZ }
+  { timezone: TZ },
 );
 
 /**
@@ -233,15 +238,18 @@ app.all("/cron/devocional/run", async (_req: Request, res: Response) => {
  * DEVOCIONAL MNDD — verificação + envio de notificação (manual)
  * (checa se existe devocional do dia e notifica)
  */
-app.get("/cron/verificar-devocional-mndd", async (_req: Request, res: Response) => {
-  try {
-    const resultado = await verificarDevocionalMNDDNovo();
-    res.json({ ok: true, dataHoje: hojeSP_ISO(), ...resultado });
-  } catch (err) {
-    console.error("❌ Erro na verificação devocional MNDD:", err);
-    res.status(500).json({ ok: false, error: String(err) });
-  }
-});
+app.get(
+  "/cron/verificar-devocional-mndd",
+  async (_req: Request, res: Response) => {
+    try {
+      const resultado = await verificarDevocionalMNDDNovo();
+      res.json({ ok: true, dataHoje: hojeSP_ISO(), ...resultado });
+    } catch (err) {
+      console.error("❌ Erro na verificação devocional MNDD:", err);
+      res.status(500).json({ ok: false, error: String(err) });
+    }
+  },
+);
 
 /**
  * DEVOCIONAL MNDD — agendamento de notificação
@@ -259,7 +267,7 @@ cron.schedule(
       console.error("❌ [CRON] Erro ao verificar/enviar devocional MNDD:", err);
     }
   },
-  { timezone: TZ }
+  { timezone: TZ },
 );
 
 /**
@@ -281,7 +289,7 @@ cron.schedule(
       console.error("❌ [CRON] Erro ao enviar aniversariantes:", error);
     }
   },
-  { timezone: TZ }
+  { timezone: TZ },
 );
 
 /**
@@ -296,14 +304,16 @@ cron.schedule(
   async () => {
     console.log("⏰ [CRON] Rodando checagem de ranking (15:00 SP)...");
     try {
-      const response = await fetch("https://mndd-backend.onrender.com/ranking/check");
+      const response = await fetch(
+        "https://mndd-backend.onrender.com/ranking/check",
+      );
       const data = await response.text();
       console.log("✅ [CRON] Resultado ranking:", data);
     } catch (error) {
       console.error("❌ [CRON] Erro ao checar ranking:", error);
     }
   },
-  { timezone: TZ }
+  { timezone: TZ },
 );
 
 // =====================================================
