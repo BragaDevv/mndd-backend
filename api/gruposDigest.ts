@@ -4,16 +4,16 @@ import cron from "node-cron";
 const db = admin.firestore();
 
 const GROUPS = [
-  "Louvor",
-  "Amar&Servir",
-  "Varões",
-  "Guerreiras",
-  "Adolescentes",
-  "Dança",
-  "Geração",
-  "Obreiros",
-  "Infantil",
-  "Midia",
+  "louvor",
+  "amareservir",
+  "varoes",
+  "guerreiras",
+  "adolescentes",
+  "danca",
+  "geracao",
+  "obreiros",
+  "infantil",
+  "midia",
 ] as const;
 
 type GroupId = (typeof GROUPS)[number];
@@ -78,11 +78,12 @@ async function getLastMessageAt(grupoId: string) {
   return ts?.toDate ? ts.toDate() : null;
 }
 
-async function getGroupUserUids(grupoId: GroupId) {
+async function getGroupUserUids(grupoSlug: string) {
   const snap = await db
     .collection("usuarios")
-    .where("grupos", "array-contains", grupoId)
+    .where(`notificacoes.${grupoSlug}`, "!=", null)
     .get();
+
   return snap.docs.map((d) => d.id);
 }
 
