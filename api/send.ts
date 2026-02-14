@@ -85,6 +85,7 @@ import openaiRouter from "./openai";
 import pexelsHandler from "./pexels";
 
 import crosswordSeedRouter from "./crosswordSeed";
+import crosswordGenerate from "./crosswordGenerate";
 
 import { startGroupsDigestCron } from "./gruposDigest";
 startGroupsDigestCron();
@@ -197,6 +198,7 @@ app.use("/api/openai", resumoCapituloRouter);
 //
 
 app.use("/api", crosswordSeedRouter);
+app.use("/api", crosswordGenerate);
 
 // =====================================================
 // ⏰ CRON JOBS (PADRONIZADOS COM TIMEZONE SP)
