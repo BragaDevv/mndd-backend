@@ -137,11 +137,11 @@ router.post("/crossword/generate", async (req: Request, res: Response) => {
 
     // 1) IA gera lista de palavras + dicas
     const prompt = `
-Gere uma lista de ${wordsCount} respostas (1 palavra cada) e dicas em PT-BR para um jogo de palavras cruzadas, com nível de dificuldade difícil.
+Gere uma lista de ${wordsCount} respostas (1 palavra cada) e dicas em PT-BR para um jogo de palavras cruzadas, com nível de dificuldade médio.
 Tema: "${theme}".
 Regras:
 - Cada "answer" deve ser UMA palavra (sem espaços), apenas letras (pode ter acento, eu normalizo depois).
-- Tamanho ideal: entre 5 e 9 letras.
+- Tamanho ideal: entre 4 e 7 letras.
 - Dicas claras e curtas.
 - Evite nomes obscuros.
 Retorne SOMENTE JSON no formato:
