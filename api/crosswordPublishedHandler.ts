@@ -51,7 +51,7 @@ export default async function crosswordPublishedHandler(
 
     const doc = pubSnap.docs[0];
     const data = doc.data();
-    const weekId = data.weekId ?? doc.id;
+    const { weekId } = (req.body ?? {}) as { weekId?: string };
     const title = data.title ?? "Palavras Cruzadas";
 
     const configRef = admin
