@@ -86,6 +86,9 @@ import pexelsHandler from "./pexels";
 
 import crosswordSeedRouter from "./crosswordSeed";
 import crosswordGenerate from "./crosswordGenerate";
+import crosswordLeaderHandler from "./crosswordRankingLeader";
+import crosswordPublishedHandler from "./crosswordPublishedHandler";
+import crosswordRankingLeader from "./crosswordRankingLeader";
 
 import { startGroupsDigestCron } from "./gruposDigest";
 startGroupsDigestCron();
@@ -199,6 +202,36 @@ app.use("/api/openai", resumoCapituloRouter);
 
 app.use("/api", crosswordSeedRouter);
 app.use("/api", crosswordGenerate);
+// rota manual Push Ranking Cruzadas (pra testar pelo navegador/postman)
+app.post("/api/crossword/leader-check", crosswordLeaderHandler);
+
+// 🔔 AUTO Push Ranking Cruzadas - Sexta às 11h
+cron.schedule(
+  "0 11 * * 5",
+  async () => {
+    try {
+      console.log("🕚 Rodando cron da Cruzada (sexta 11h)...");
+
+      await fetch(
+        "https://mndd-backend.onrender.com/api/crossword/leader-check",
+        { method: "POST" },
+      );
+
+      console.log("✅ Cron: checagem de líder da cruzada ok");
+    } catch (e) {
+      console.log("❌ Cron: falha checagem cruzada", e);
+    }
+  },
+  {
+    timezone: "America/Sao_Paulo", // 🔥 MUITO IMPORTANTE
+  },
+);
+
+// 🔥 ROTA: nova cruzada publicada
+app.post("/api/crossword/published-check", crosswordPublishedHandler);
+
+// 👑 ROTA: mudança de liderança
+app.post("/api/crossword/leader-check", crosswordRankingLeader);
 
 // =====================================================
 // ⏰ CRON JOBS (PADRONIZADOS COM TIMEZONE SP)
