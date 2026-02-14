@@ -32,7 +32,7 @@ async function sendExpo(messages: any[]) {
 
 export default async function crosswordPublishedHandler(
   req: Request,
-  res: Response
+  res: Response,
 ) {
   try {
     console.log("🔍 Verificando nova cruzada publicada...");
@@ -87,7 +87,7 @@ export default async function crosswordPublishedHandler(
       to: token,
       sound: "default",
       title: "🧩 Nova Cruzada Disponível!",
-      body: `${title} já está disponível. Corra para jogar!`,
+      body: `Tema: ${title}. Corra para jogar!🎮`,
       data: { type: "crossword_new", weekId },
     }));
 
@@ -98,7 +98,7 @@ export default async function crosswordPublishedHandler(
         lastWeekId: weekId,
         notifiedAt: admin.firestore.FieldValue.serverTimestamp(),
       },
-      { merge: true }
+      { merge: true },
     );
 
     return res.status(200).json({
