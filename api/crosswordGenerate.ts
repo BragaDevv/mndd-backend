@@ -35,7 +35,9 @@ function normalizeAnswer(s: string) {
 }
 
 function makeEmptyGrid(size: number) {
-  return Array.from({ length: size }, () => Array.from({ length: size }, () => "#"));
+  return Array.from({ length: size }, () =>
+    Array.from({ length: size }, () => "#"),
+  );
 }
 
 function gridToRows(grid: string[][]) {
@@ -78,7 +80,12 @@ function placeWord(
 
 function findCrossPlacements(grid: string[][], word: string) {
   const size = grid.length;
-  const placements: { row: number; col: number; dir: Direction; score: number }[] = [];
+  const placements: {
+    row: number;
+    col: number;
+    dir: Direction;
+    score: number;
+  }[] = [];
 
   // tenta cruzar letras já existentes
   for (let r = 0; r < size; r++) {
@@ -137,14 +144,29 @@ router.post("/crossword/generate", async (req: Request, res: Response) => {
 
     // 1) IA gera lista de palavras + dicas
     const prompt = `
-Gere uma lista de ${wordsCount} respostas (1 palavra cada) e dicas em PT-BR para um jogo de palavras cruzadas, com nível de dificuldade fácil.
+Você é um gerador de PALAVRAS CRUZADAS com respostas OBJETIVAS (sem interpretação).
+Gere uma lista de ${wordsCount} itens (resposta + dica) em PT-BR, dificuldade FÁCIL.
 Tema: "${theme}".
-Regras:
-- Cada "answer" deve ser UMA palavra (sem espaços), apenas letras (pode ter acento, eu normalizo depois).
-- Tamanho ideal: entre 4 e 7 letras.
-- Dicas claras, curtas e diretas, e que fazem sentido á pergunta.
-- Evite nomes obscuros.
-Retorne SOMENTE JSON no formato:
+
+REGRAS DE OURO (obrigatórias):
+1) Cada "answer" deve ter UMA ÚNICA resposta correta e verificável (fato/termo específico).
+   - Proibido: perguntas subjetivas/abertas como "sentimento", "valor", "mensagem", "o que pregou", "algo que representa", "virtude", "qualidade".
+   - Permitido: pessoa específica, lugar específico, objeto/termo específico, nome de livro, povo/nação, evento bíblico bem definido.
+2) A dica ("clue") deve ser direta e fechar em UMA resposta:
+   - Use padrões como: "Quem ...?", "Onde ...?", "Povo ...", "Rei de ...", "Profeta que ...", "Rio ...", "Cidade ...", "Pai de ...".
+3) Resposta:
+   - UMA palavra só, sem espaços, só letras (pode ter acento).
+   - Tamanho: 4 a 7 letras (obrigatório). Não gere fora disso.
+4) Evite termos obscuros. Priorize fatos muito conhecidos.
+5) Não use abreviações, siglas, números ou pontuação na answer.
+6) Não repita answers e não use variações da mesma palavra (singular/plural, masculino/feminino).
+
+CHECKLIST antes de retornar:
+- Cada item tem resposta única (não dá margem para “mais de uma”).
+- Cada dica aponta claramente para a resposta.
+- Todas as answers têm 4–7 letras.
+
+Retorne SOMENTE JSON válido no formato:
 {
   "title": "string",
   "items": [{ "answer": "string", "clue": "string" }]
@@ -189,7 +211,11 @@ Retorne SOMENTE JSON no formato:
     if (!canPlaceWord(grid, first.answer, startRow, startCol, "across")) {
       // fallback: topo
       if (!canPlaceWord(grid, first.answer, 0, 0, "across")) {
-        return res.status(400).json({ error: "Não foi possível montar a grade (primeira palavra)." });
+        return res
+          .status(400)
+          .json({
+            error: "Não foi possível montar a grade (primeira palavra).",
+          });
       }
     }
 
