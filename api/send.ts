@@ -93,13 +93,13 @@ import crosswordRankingLeader from "./crosswordRankingLeader";
 import { startGroupsDigestCron } from "./gruposDigest";
 startGroupsDigestCron();
 
-import instagramThumbnail from "./instagramThumbnail";
+import reelsCapaIARouter from "./reelsCapaIA";
 
 // =====================================================
 // 🚀 APP
 // =====================================================
 const app = express();
-app.use(bodyParser.json({ limit: "3mb" }));
+app.use(bodyParser.json({ limit: "10mb" }));
 
 // =====================================================
 // 🌎 CONSTANTES
@@ -172,8 +172,7 @@ app.all("/cifras", cifraHandler);
 app.get("/ranking/check", rankingHandler);
 
 //
-// CAPA RELLS INSTA
-app.get("/api/instagram-thumbnail", instagramThumbnail);
+app.use("/api", reelsCapaIARouter);
 
 // =====================================================
 // ✅ ROTAS - PEXELS / ASSINATURA / ESTUDO
