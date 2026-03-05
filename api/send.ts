@@ -93,6 +93,8 @@ import crosswordRankingLeader from "./crosswordRankingLeader";
 import { startGroupsDigestCron } from "./gruposDigest";
 startGroupsDigestCron();
 
+import videosIARouter from "./videosIA";
+
 // =====================================================
 // 🚀 APP
 // =====================================================
@@ -186,6 +188,9 @@ app.post("/api/render-estudo", renderEstudoCloudinary);
 // ✅ ROTAS - ANIVERSARIANTES
 // =====================================================
 app.post("/aniversariantes", aniversariantesHandler);
+
+//
+app.use("/api", videosIARouter);
 
 // =====================================================
 // ✅ ROTAS - NOTIF IA (as que você já tem)
