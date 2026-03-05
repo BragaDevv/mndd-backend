@@ -93,6 +93,8 @@ import crosswordRankingLeader from "./crosswordRankingLeader";
 import { startGroupsDigestCron } from "./gruposDigest";
 startGroupsDigestCron();
 
+import instagramThumbnail from "./instagramThumbnail";
+
 // =====================================================
 // 🚀 APP
 // =====================================================
@@ -168,6 +170,10 @@ app.get("/eventos/avisar", eventosAvisoHandler);
 app.get("/spotify/louvores", spotifyHandler);
 app.all("/cifras", cifraHandler);
 app.get("/ranking/check", rankingHandler);
+
+//
+// CAPA RELLS INSTA
+app.get("/api/instagram-thumbnail", instagramThumbnail);
 
 // =====================================================
 // ✅ ROTAS - PEXELS / ASSINATURA / ESTUDO
