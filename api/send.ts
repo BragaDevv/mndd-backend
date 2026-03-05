@@ -93,8 +93,6 @@ import crosswordRankingLeader from "./crosswordRankingLeader";
 import { startGroupsDigestCron } from "./gruposDigest";
 startGroupsDigestCron();
 
-import reelsCapaIARouter from "./reelsCapaIA";
-
 // =====================================================
 // 🚀 APP
 // =====================================================
@@ -171,8 +169,6 @@ app.get("/spotify/louvores", spotifyHandler);
 app.all("/cifras", cifraHandler);
 app.get("/ranking/check", rankingHandler);
 
-//
-app.use("/api", reelsCapaIARouter);
 
 // =====================================================
 // ✅ ROTAS - PEXELS / ASSINATURA / ESTUDO
