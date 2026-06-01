@@ -81,6 +81,7 @@ import notificarOwnerUsuarioCriado from "./notificarOwnerUsuarioCriado";
 
 import resumoCapituloRouter from "./resumoCapitulo";
 import openaiRouter from "./openai";
+import { ttsHandler } from "./tts";
 
 import pexelsHandler from "./pexels";
 
@@ -203,6 +204,9 @@ app.use("/", notificacaoIA);
 
 app.use("/api/openai", openaiRouter);
 app.use("/api/openai", resumoCapituloRouter);
+
+// TTS — voz neural Azure (GET /api/tts?texto=...)
+app.get("/api/tts", ttsHandler);
 
 //
 
