@@ -80,7 +80,7 @@ export async function checarEnviarVersiculo() {
         `⏰ Dentro do intervalo (${horaSalva} até ${horaSalva} + 5min). Chamando rota /versiculo...`
       );
 
-      const url = "https://mndd-backend.onrender.com/versiculo";
+      const url = "https://mndd-backend-8hr0.onrender.com/versiculo";
       console.log("[CRON] POST =>", url);
 
       const res = await fetch(url, {

@@ -219,7 +219,7 @@ cron.schedule(
       console.log("🕚 Rodando cron da Cruzada (sexta 11h)...");
 
       await fetch(
-        "https://mndd-backend.onrender.com/api/crossword/leader-check",
+        "https://mndd-backend-8hr0.onrender.com/api/crossword/leader-check",
         { method: "POST" },
       );
 
@@ -263,7 +263,7 @@ cron.schedule(
 
 /**
  * DEVOCIONAL IA — rodar manualmente (debug)
- * https://mndd-backend.onrender.com/cron/devocional/run
+ * https://mndd-backend-8hr0.onrender.com/cron/devocional/run
  */
 app.all("/cron/devocional/run", async (_req: Request, res: Response) => {
   try {
@@ -322,7 +322,7 @@ cron.schedule(
   async () => {
     console.log("⏰ [CRON] Rodando aniversariantes do dia (13:00 SP)...");
     try {
-      await fetch("https://mndd-backend.onrender.com/aniversariantes", {
+      await fetch("https://mndd-backend-8hr0.onrender.com/aniversariantes", {
         method: "POST",
       });
       console.log("✅ [CRON] Notificações de aniversário enviadas.");
@@ -346,7 +346,7 @@ cron.schedule(
     console.log("⏰ [CRON] Rodando checagem de ranking (15:00 SP)...");
     try {
       const response = await fetch(
-        "https://mndd-backend.onrender.com/ranking/check",
+        "https://mndd-backend-8hr0.onrender.com/ranking/check",
       );
       const data = await response.text();
       console.log("✅ [CRON] Resultado ranking:", data);
