@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import admin from "firebase-admin";
 import fetch from "node-fetch";
-import versiculos from "../data/versiculos.json";
+import { getVersiculoDoDia } from "./versiculoDoDia";
 
 function isValidExpoToken(t: any): t is string {
   return (
@@ -40,8 +40,7 @@ export default async function handler(req: Request, res: Response) {
   if (req.method !== "POST") return res.status(405).json({ error: "Método não permitido" });
 
   try {
-    const dia = new Date().getDate();
-    const versiculo = versiculos[dia % versiculos.length];
+    const versiculo = getVersiculoDoDia();
 
     console.log("[VERSICULO] buscando usuarios...");
     const usersSnap = await admin.firestore().collection("usuarios").get();
