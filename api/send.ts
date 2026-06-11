@@ -80,6 +80,7 @@ import notificacaoIA from "./notificacaoIA";
 import notificarOwnerUsuarioCriado from "./notificarOwnerUsuarioCriado";
 
 import resumoCapituloRouter from "./resumoCapitulo";
+import estudoCapituloRouter from "./estudoCapitulo";
 import openaiRouter from "./openai";
 import { ttsHandler } from "./tts";
 
@@ -204,6 +205,7 @@ app.use("/", notificacaoIA);
 
 app.use("/api/openai", openaiRouter);
 app.use("/api/openai", resumoCapituloRouter);
+app.use("/api/openai", estudoCapituloRouter);
 
 // TTS — voz neural Azure (GET /api/tts?texto=...)
 app.get("/api/tts", ttsHandler);
