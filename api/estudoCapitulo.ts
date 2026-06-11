@@ -7,7 +7,7 @@ const router = Router();
 const db = admin.firestore();
 
 const COLLECTION = "estudos_capitulos";
-const PROMPT_VERSION = 1;
+const PROMPT_VERSION = 2;
 const BACKEND_URL = process.env.BACKEND_URL || "https://mndd-backend-8hr0.onrender.com";
 
 const openai = new OpenAI({
@@ -34,12 +34,23 @@ Doutrina: cristologia bíblica, graça, redenção. Nunca especule além da Bíb
 Use a Bíblia como fonte única de verdade.`;
 
   const user = `Gere um estudo teológico do capítulo ${chapterNumber} de ${bookName}.
+
+IMPORTANTE: Escolha trechos DIFERENTES de cada capítulo. Não use sempre v.3-5.
+Selecione os versículos mais significativos teologicamente para o capítulo.
+
 Responda com este JSON exato (sem markdown, sem blocos de código):
 {
   "resumo": "2-3 parágrafos contextualizando o capítulo",
-  "trechos": [{"ref": "v.3-5", "explicacao": "explicação do trecho"}],
-  "palavrasChave": [{"termo": "termo", "explicacao": "explicação"}],
-  "curiosidades": ["fato 1", "fato 2"]
+  "trechos": [
+    {"ref": "v.X-Y", "explicacao": "primeiro trecho importante"},
+    {"ref": "v.A-B", "explicacao": "segundo trecho importante"},
+    {"ref": "v.C-D", "explicacao": "terceiro trecho importante"}
+  ],
+  "palavrasChave": [
+    {"termo": "termo teológico", "explicacao": "definição"},
+    {"termo": "outro termo", "explicacao": "definição"}
+  ],
+  "curiosidades": ["fato histórico/cultural 1", "fato histórico/cultural 2"]
 }`;
 
   const completion = await openai.chat.completions.create({
