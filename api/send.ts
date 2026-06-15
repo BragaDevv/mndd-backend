@@ -92,6 +92,9 @@ import crosswordLeaderHandler from "./crosswordRankingLeader";
 import crosswordPublishedHandler from "./crosswordPublishedHandler";
 import crosswordRankingLeader from "./crosswordRankingLeader";
 
+import versiculoLeaderHandler from "./versiculoRankingLeader";
+import versiculoNovaPalavraHandler from "./versiculoNovaPalavra";
+
 import { startGroupsDigestCron } from "./gruposDigest";
 startGroupsDigestCron();
 
@@ -172,6 +175,14 @@ app.get("/eventos/avisar", eventosAvisoHandler);
 app.get("/spotify/louvores", spotifyHandler);
 app.all("/cifras", cifraHandler);
 app.get("/ranking/check", rankingHandler);
+
+// =====================================================
+// ✅ ROTAS - ADIVINHE O VERSÍCULO (GuessVerse)
+// =====================================================
+// 👑 mudança de liderança (chamado pelo app ao salvar o score do dia)
+app.post("/versiculo/check", versiculoLeaderHandler);
+// 📖 push de nova palavra (manual / debug)
+app.post("/versiculo/nova-palavra", versiculoNovaPalavraHandler);
 
 
 // =====================================================
@@ -358,6 +369,32 @@ cron.schedule(
       console.log("✅ [CRON] Resultado ranking:", data);
     } catch (error) {
       console.error("❌ [CRON] Erro ao checar ranking:", error);
+    }
+  },
+  { timezone: TZ },
+);
+
+/**
+ * ADIVINHE O VERSÍCULO — push de nova palavra do dia
+ * ⏰ Todo dia às 08:00 (SP)
+ *
+ * A palavra em si rotaciona sozinha no app (relógio local do aparelho);
+ * este cron apenas anuncia que o desafio do dia está disponível.
+ * Para mudar o horário, ajuste a expressão cron abaixo.
+ */
+cron.schedule(
+  "0 8 * * *",
+  async () => {
+    console.log("⏰ [CRON] Push de nova palavra do Versículo (08:00 SP)...");
+    try {
+      const response = await fetch(
+        "https://mndd-backend-8hr0.onrender.com/versiculo/nova-palavra",
+        { method: "POST" },
+      );
+      const data = await response.text();
+      console.log("✅ [CRON] Resultado nova palavra:", data);
+    } catch (error) {
+      console.error("❌ [CRON] Erro ao enviar push de nova palavra:", error);
     }
   },
   { timezone: TZ },
