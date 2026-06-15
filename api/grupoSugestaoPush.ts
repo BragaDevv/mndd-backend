@@ -67,36 +67,38 @@ export default async function grupoSugestaoPushHandler(req: Request, res: Respon
 
     console.log("🎵 Nova sugestão de louvor:", { grupoId, grupoNome, sugeridoPor, titulo });
 
-    // 1) membros do grupo: usuarios com grupoId no array 'grupos'
+    // 1) membros do grupo: usuarios com notificacoes.{grupoId} != null
+    //    (mesmo critério usado pelo cron de digest dos grupos)
     const membrosSnap = await admin
       .firestore()
       .collection("usuarios")
-      .where("grupos", "array-contains", grupoId)
+      .where(`notificacoes.${grupoId}`, "!=", null)
       .get();
 
-    const membrosUids = new Set(
-      membrosSnap.docs
-        .map((d) => d.id)
-        .filter((id) => id !== sugeridoPor) // não notifica quem sugeriu
-    );
+    const membrosUids = membrosSnap.docs
+      .map((d) => d.id)
+      .filter((id) => id !== sugeridoPor); // não notifica quem sugeriu
 
-    console.log(`👥 Membros do grupo (fora o autor): ${membrosUids.size}`);
+    console.log(`👥 Membros do grupo (fora o autor): ${membrosUids.length}`);
 
-    if (membrosUids.size === 0) {
+    if (membrosUids.length === 0) {
       return res.status(200).json({ message: "Sem outros membros para notificar.", grupoId });
     }
 
-    // 2) tokens dos devices logados que pertencem a esses membros
-    const devicesSnap = await admin
-      .firestore()
-      .collection("push_devices")
-      .where("isLoggedIn", "==", true)
-      .get();
-
-    const tokens = devicesSnap.docs
-      .filter((d) => membrosUids.has(String(d.data()?.uid)))
-      .map((d) => d.data()?.expoToken)
-      .filter(isValidExpoToken);
+    // 2) tokens dos devices desses membros (push_devices where uid in chunks de 10)
+    const tokens: string[] = [];
+    for (let i = 0; i < membrosUids.length; i += 10) {
+      const chunk = membrosUids.slice(i, i + 10);
+      const devSnap = await admin
+        .firestore()
+        .collection("push_devices")
+        .where("uid", "in", chunk)
+        .get();
+      devSnap.forEach((d) => {
+        const t = d.data()?.expoToken;
+        if (isValidExpoToken(t)) tokens.push(t);
+      });
+    }
 
     const uniqueTokens = Array.from(new Set(tokens));
 
