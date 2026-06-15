@@ -376,14 +376,14 @@ cron.schedule(
 
 /**
  * ADIVINHE O VERSÍCULO — push de nova palavra do dia
- * ⏰ Todo dia às 08:00 (SP)
+ * ⏰ Todo dia às 09:30 (SP)
  *
- * A palavra em si rotaciona sozinha no app (relógio local do aparelho);
- * este cron apenas anuncia que o desafio do dia está disponível.
- * Para mudar o horário, ajuste a expressão cron abaixo.
+ * Alinhado com a virada da palavra no app (corte 09:30, hora local).
+ * Para mudar o horário, ajuste a expressão cron abaixo E o CUTOFF em
+ * utils/guessVerseDay.ts no app (precisam bater).
  */
 cron.schedule(
-  "0 8 * * *",
+  "30 9 * * *",
   async () => {
     console.log("⏰ [CRON] Push de nova palavra do Versículo (08:00 SP)...");
     try {

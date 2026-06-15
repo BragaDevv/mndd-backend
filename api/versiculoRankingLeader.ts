@@ -53,14 +53,20 @@ async function sendExpoInChunks(messages: any[]) {
   return results;
 }
 
-/** Data "hoje" no fuso de São Paulo no formato YYYY-MM-DD (igual ao dia gerado no app). */
+/**
+ * Data "hoje" do jogo no formato YYYY-MM-DD (igual ao dia gerado no app).
+ * O dia do jogo vira às 09:30 (SP), então deslocamos o instante atual em 9h30
+ * antes de pegar a data no fuso de São Paulo.
+ */
 function hojeSP(): string {
+  const CUTOFF_MS = (9 * 60 + 30) * 60000; // 09:30
+  const shifted = new Date(Date.now() - CUTOFF_MS);
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Sao_Paulo",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).format(new Date());
+  }).format(shifted);
 }
 
 function formatTime(seconds: number) {
