@@ -95,6 +95,8 @@ import crosswordRankingLeader from "./crosswordRankingLeader";
 import versiculoLeaderHandler from "./versiculoRankingLeader";
 import versiculoNovaPalavraHandler from "./versiculoNovaPalavra";
 
+import grupoSugestaoPushHandler from "./grupoSugestaoPush";
+
 import { startGroupsDigestCron } from "./gruposDigest";
 startGroupsDigestCron();
 
@@ -183,6 +185,12 @@ app.get("/ranking/check", rankingHandler);
 app.post("/versiculo/check", versiculoLeaderHandler);
 // 📖 push de nova palavra (manual / debug)
 app.post("/versiculo/nova-palavra", versiculoNovaPalavraHandler);
+
+// =====================================================
+// ✅ ROTA - GRUPOS (sugestão de louvor)
+// =====================================================
+// 🎵 notifica os membros do grupo quando alguém adiciona uma sugestão
+app.post("/grupo/sugestao-push", grupoSugestaoPushHandler);
 
 
 // =====================================================
