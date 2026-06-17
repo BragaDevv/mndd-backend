@@ -43,6 +43,49 @@ async function sendExpo(messages: any[]) {
   return results;
 }
 
+/** Número do dia (estável) no fuso de São Paulo, para variar a mensagem. */
+function diaIndexSP(): number {
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const [y, m, d] = fmt.format(new Date()).split("-").map(Number);
+  return Math.floor(Date.UTC(y, m - 1, d) / 86400000);
+}
+
+/** Junta nomes de forma natural: "A", "A e B", "A, B e C". */
+function listarNomes(nomes: string[]): string {
+  if (nomes.length === 1) return nomes[0];
+  if (nomes.length === 2) return `${nomes[0]} e ${nomes[1]}`;
+  return `${nomes.slice(0, -1).join(", ")} e ${nomes[nomes.length - 1]}`;
+}
+
+// Bênçãos variadas para o aniversariante ({nome} é substituído pelo 1º nome).
+const BENCAOS_ANIVERSARIO: { title: string; body: string }[] = [
+  {
+    title: "🎉 Feliz aniversário, {nome}!",
+    body: "Que Deus renove suas forças e encha seu novo ano de bênçãos, paz e alegria 🙏🎂",
+  },
+  {
+    title: "🥳 Parabéns, {nome}!",
+    body: "Que o Senhor te conceda os desejos do teu coração (Sl 37:4). Um ano abençoado pra você! 🎂",
+  },
+  {
+    title: "🎂 Hoje é o seu dia, {nome}!",
+    body: "O Senhor te abençoe e te guarde, e faça resplandecer o Seu rosto sobre você (Nm 6:24-25) 🙏",
+  },
+  {
+    title: "🎈 Feliz aniversário, {nome}!",
+    body: "As misericórdias do Senhor se renovam a cada manhã. Que seu novo ano transborde delas! 🎉🎂",
+  },
+  {
+    title: "🌟 Parabéns, {nome}!",
+    body: "Que este novo ciclo venha cheio de propósito, saúde e da presença de Deus em cada passo 🎂🙏",
+  },
+];
+
 export default async function handler(req: Request, res: Response) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Método não permitido" });
@@ -156,32 +199,51 @@ export default async function handler(req: Request, res: Response) {
       devicesByUid.set(d.uid, arr);
     }
 
+    const diaIdx = diaIndexSP();
+
     const messagesPersonalizados: any[] = [];
-    for (const a of aniversariantes) {
+    aniversariantes.forEach((a, i) => {
       const tokensDoAniversariante = devicesByUid.get(a.uid) || [];
+      // varia a bênção por dia e por aniversariante (estável no dia)
+      const bencao =
+        BENCAOS_ANIVERSARIO[(diaIdx + i) % BENCAOS_ANIVERSARIO.length];
+
       for (const token of Array.from(new Set(tokensDoAniversariante))) {
         messagesPersonalizados.push({
           to: token,
           sound: "default",
-          title: `🎉 Parabéns, ${a.primeiroNome}!`,
-          body: "Que Deus abençoe sua vida hoje e sempre 🙏🎂",
+          title: bencao.title.replace("{nome}", a.primeiroNome),
+          body: bencao.body,
+          data: {
+            type: "aniversario",
+            screen: "MNDDScreen",
+            params: { abrirAniversario: true },
+          },
         });
       }
+    });
+
+    // Push geral: para o restante (exclui tokens dos aniversariantes).
+    // Agora cita os nomes — mensagem autossuficiente, sem "acesse o app".
+    let corpoGeral: string;
+    if (aniversariantes.length === 1) {
+      corpoGeral = `🎂 Hoje é aniversário de ${aniversariantes[0].nomeCompleto}! Que tal mandar uma mensagem de carinho? 🥳`;
+    } else {
+      const primeirosNomes = aniversariantes.map((a) => a.primeiroNome);
+      const listaTexto =
+        primeirosNomes.length <= 4
+          ? listarNomes(primeirosNomes)
+          : `${primeirosNomes.slice(0, 3).join(", ")} e mais ${primeirosNomes.length - 3}`;
+      corpoGeral = `🎂 Hoje ${aniversariantes.length} irmãos fazem aniversário: ${listaTexto}! Celebre com a família MNDD 🥳`;
     }
 
-    // Push geral: para o restante (exclui tokens dos aniversariantes)
-    // Se for 1 aniversariante: “Hoje é o aniversário de Nome Sobrenome!”
-    // Se forem vários: texto genérico (pra não ficar enorme).
-    const msgGeral =
-      aniversariantes.length === 1
-        ? {
-            title: "🎂 Aniversário hoje!",
-            body: `🎂 Hoje é o aniversário de ${aniversariantes[0].nomeCompleto}!`,
-          }
-        : {
-            title: "🎂 Aniversários hoje!",
-            body: "🎂 Hoje temos aniversariantes! Acesse o app para conferir.",
-          };
+    const msgGeral = {
+      title:
+        aniversariantes.length === 1
+          ? "🎂 Aniversário hoje!"
+          : "🎂 Aniversários hoje!",
+      body: corpoGeral,
+    };
 
     const messagesGerais: any[] = tokensOutros.map((token) => ({
       to: token,

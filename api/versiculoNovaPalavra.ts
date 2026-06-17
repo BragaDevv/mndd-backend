@@ -95,7 +95,7 @@ export default async function versiculoNovaPalavraHandler(
       sound: "default",
       title: "🧩 Nova palavra do dia!",
       body: "O Adivinhe a Palavra de hoje já está no ar. Será que você descobre? 🔤",
-      data: { type: "guessverse_newword" },
+      data: { type: "guessverse_newword", screen: "GamesHomeScreen" },
     }));
 
     console.log("🚀 Enviando push de nova palavra para todos os DEVICES LOGADOS...");

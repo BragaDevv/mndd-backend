@@ -79,7 +79,7 @@ router.post("/send", async (req: Request, res: Response) => {
   const requestId = `${Date.now().toString(36)}-${Math.random().toString(16).slice(2, 8)}`;
   const startedAt = Date.now();
 
-  const { title, body, image, to, tokens } = req.body || {};
+  const { title, body, image, to, tokens, data } = req.body || {};
 
   console.log(
     `[SEND:${requestId}] 📨 POST /send title="${safeText(title)}" body="${safeText(body)}" ` +
@@ -164,6 +164,7 @@ router.post("/send", async (req: Request, res: Response) => {
       title,
       body,
       ...(image ? { image } : {}),
+      ...(data && typeof data === "object" ? { data } : {}),
     }));
 
     console.log(

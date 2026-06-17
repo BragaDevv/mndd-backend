@@ -88,7 +88,7 @@ export default async function crosswordPublishedHandler(
       sound: "default",
       title: "🧩 Nova Cruzada Disponível!",
       body: `Tema: ${title}. Corra para jogar!🎮`,
-      data: { type: "crossword_new", weekId },
+      data: { type: "crossword_new", weekId, screen: "GamesHomeScreen" },
     }));
 
     await sendExpo(messages);

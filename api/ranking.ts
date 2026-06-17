@@ -115,6 +115,7 @@ export default async function rankingHandler(req: Request, res: Response) {
       sound: "default",
       title: "👑 Temos um novo líder!",
       body: `${novoLider.nome || "Alguém"} assumiu o topo do ranking do Quiz MNDD!`,
+      data: { type: "ranking_leader", screen: "GamesHomeScreen" },
     }));
 
     console.log("🚀 Enviando notificações para todos os DEVICES LOGADOS...");

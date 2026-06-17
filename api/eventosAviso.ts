@@ -154,6 +154,7 @@ export default async function eventosAvisoHandler(_req: Request, res: Response) 
           sound: "default",
           title: "🔔 Não esqueça !",
           body: `${evento.tipo || "Evento"} 📍 ${evento.local || "igreja"}`,
+          data: { type: "evento", screen: "Igreja" },
         }));
 
         const expoResult = await sendExpoInChunks(messages);

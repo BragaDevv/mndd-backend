@@ -168,7 +168,7 @@ export default async function crosswordLeaderHandler(req: Request, res: Response
       sound: "default",
       title: "👑 Novo líder na Cruzada!🧩",
       body: `${novoLider.nome} assumiu o topo da cruzada (${tempo})!`,
-      data: { type: "crossword_leader", weekId },
+      data: { type: "crossword_leader", weekId, screen: "GamesHomeScreen" },
     }));
 
     console.log("🚀 Enviando notificações (Cruzada) para todos os DEVICES LOGADOS...");

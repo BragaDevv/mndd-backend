@@ -15,6 +15,20 @@ function chunkArray<T>(arr: T[], size: number) {
   return out;
 }
 
+// grupoId (Firestore) -> nome da rota da tela do grupo no app
+const GROUP_SCREENS: Record<string, string> = {
+  louvor: "LouvorScreen",
+  amareservir: "AmareServirScreen",
+  varoes: "VaroesScreen",
+  guerreiras: "GuerreirasScreen",
+  adolescentes: "AdolescentesScreen",
+  danca: "DancaScreen",
+  geracao: "GeracaoScreen",
+  obreiros: "ObreirosScreen",
+  infantil: "InfantilScreen",
+  midia: "MidiaScreen",
+};
+
 async function sendExpoInChunks(messages: any[]) {
   const chunks = chunkArray(messages, 100);
   const results: any[] = [];
@@ -117,7 +131,11 @@ export default async function grupoSugestaoPushHandler(req: Request, res: Respon
       sound: "default",
       title: `🎵 Nova sugestão em ${grupoNome}`,
       body: corpo,
-      data: { type: "grupo_sugestao", grupoId },
+      data: {
+        type: "grupo_sugestao",
+        grupoId,
+        ...(GROUP_SCREENS[grupoId] ? { screen: GROUP_SCREENS[grupoId] } : {}),
+      },
     }));
 
     console.log("🚀 Enviando push de sugestão para os membros logados...");

@@ -18,6 +18,20 @@ const GROUPS = [
 
 type GroupId = (typeof GROUPS)[number];
 
+// grupoId (Firestore) -> nome da rota da tela do grupo no app
+const GROUP_SCREENS: Record<GroupId, string> = {
+  louvor: "LouvorScreen",
+  amareservir: "AmareServirScreen",
+  varoes: "VaroesScreen",
+  guerreiras: "GuerreirasScreen",
+  adolescentes: "AdolescentesScreen",
+  danca: "DancaScreen",
+  geracao: "GeracaoScreen",
+  obreiros: "ObreirosScreen",
+  infantil: "InfantilScreen",
+  midia: "MidiaScreen",
+};
+
 function isExpoToken(t: any) {
   return typeof t === "string" && t.startsWith("ExponentPushToken");
 }
@@ -149,7 +163,7 @@ async function runDigestForGroup(grupoId: GroupId) {
       tokens,
       "Nova mensagem no grupo",
       "Tem mensagens novas no seu grupo. Abra o app para ver.",
-      { type: "group_chat", grupoId },
+      { type: "group_chat", grupoId, screen: GROUP_SCREENS[grupoId] },
     );
     console.log(`✅ Push enviado: grupo=${grupoId}, tokens=${tokens.length}`);
   } else {

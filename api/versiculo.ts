@@ -16,6 +16,26 @@ function safeBody(input: string, max = 220) {
   return s.slice(0, max - 1) + "…";
 }
 
+// Nome PT → abbrev canônica (mesma do app em utils/bibliaVersiculos.ts).
+// Usado para o deep-link abrir o capítulo com o versículo destacado.
+const PT_TO_ABBREV: Record<string, string> = {
+  "Gênesis": "gn", "Êxodo": "ex", "Levítico": "lv", "Números": "nm", "Deuteronômio": "dt",
+  "Josué": "js", "Juízes": "jz", "Rute": "rt", "1 Samuel": "1sm", "2 Samuel": "2sm",
+  "1 Reis": "1rs", "2 Reis": "2rs", "1 Crônicas": "1cr", "2 Crônicas": "2cr",
+  "Esdras": "ed", "Neemias": "ne", "Ester": "et", "Jó": "jó", "Salmos": "sl",
+  "Provérbios": "pv", "Eclesiastes": "ec", "Cantares": "ct", "Isaías": "is",
+  "Jeremias": "jr", "Lamentações": "lm", "Ezequiel": "ez", "Daniel": "dn", "Oséias": "os",
+  "Joel": "jl", "Amós": "am", "Obadias": "ob", "Jonas": "jn", "Miquéias": "mq", "Naum": "na",
+  "Habacuque": "hc", "Sofonias": "sf", "Ageu": "ag", "Zacarias": "zc", "Malaquias": "ml",
+  "Mateus": "mt", "Marcos": "mc", "Lucas": "lc", "João": "jo", "Atos": "atos",
+  "Romanos": "rm", "1 Coríntios": "1co", "2 Coríntios": "2co", "Gálatas": "gl",
+  "Efésios": "ef", "Filipenses": "fp", "Colossenses": "cl",
+  "1 Tessalonicenses": "1ts", "2 Tessalonicenses": "2ts",
+  "1 Timóteo": "1tm", "2 Timóteo": "2tm", "Tito": "tt", "Filêmon": "fm", "Hebreus": "hb",
+  "Tiago": "tg", "1 Pedro": "1pe", "2 Pedro": "2pe",
+  "1 João": "1jo", "2 João": "2jo", "3 João": "3jo", "Judas": "jd", "Apocalipse": "ap",
+};
+
 // limita concorrência pra não estourar o Firestore
 async function mapWithConcurrency<T, R>(
   items: T[],
@@ -78,11 +98,27 @@ export default async function handler(req: Request, res: Response) {
       220
     );
 
+    // Deep-link: abre o capítulo com o versículo destacado (payload leve).
+    // O app monta o capítulo localmente a partir do verseRef.
+    const abbrev = PT_TO_ABBREV[versiculo.livro];
+    const verseData = abbrev
+      ? {
+          type: "versiculo_dia",
+          screen: "Versiculos",
+          verseRef: {
+            bookAbbrev: abbrev,
+            chapterNumber: versiculo.capitulo,
+            verseNumber: versiculo.versiculo,
+          },
+        }
+      : { type: "versiculo_dia" };
+
     const messages = uniqueTokens.map((token) => ({
       to: token,
       sound: "default",
       title: "📖 Versículo do Dia",
       body,
+      data: verseData,
     }));
 
     const chunkSize = 100;

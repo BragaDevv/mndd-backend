@@ -161,6 +161,8 @@ export async function verificarDevocionalMNDDNovo() {
       type: "devocional",
       devocionalId: docEncontrado!.id,
       dataISO: hojeISO,
+      screen: "Devocional",
+      params: { data: hojeISO },
     },
   }));
 

@@ -182,7 +182,7 @@ export default async function versiculoLeaderHandler(req: Request, res: Response
       sound: "default",
       title: "👑 Novo Líder !",
       body: `🔥 ${novoLider.nome} assumiu o 1º lugar de hoje no #PalavraDoDia! Bora retomar a liderança? ⚔️`,
-      data: { type: "guessverse_leader", dia },
+      data: { type: "guessverse_leader", dia, screen: "GamesHomeScreen" },
     }));
 
     console.log("🚀 Enviando notificações (Versículo) para todos os DEVICES LOGADOS...");

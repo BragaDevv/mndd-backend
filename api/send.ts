@@ -97,6 +97,8 @@ import versiculoNovaPalavraHandler from "./versiculoNovaPalavra";
 
 import grupoSugestaoPushHandler from "./grupoSugestaoPush";
 
+import descobertaTrilhasHandler from "./descobertaTrilhas";
+
 import { startGroupsDigestCron } from "./gruposDigest";
 startGroupsDigestCron();
 
@@ -191,6 +193,14 @@ app.post("/versiculo/nova-palavra", versiculoNovaPalavraHandler);
 // =====================================================
 // 🎵 notifica os membros do grupo quando alguém adiciona uma sugestão
 app.post("/grupo/sugestao-push", grupoSugestaoPushHandler);
+
+// =====================================================
+// ✅ ROTA - DESCOBERTA DE TRILHAS (estudos)
+// =====================================================
+// 📲 push diário rotativo divulgando as telas de estudo
+//    (Plano de Leitura, Dicionário, Profecias, Personagens, Doutrinas)
+// manual/debug: POST/GET /trilhas/descoberta-push  (?index=0..14 | ?onlyUid=...)
+app.all("/trilhas/descoberta-push", descobertaTrilhasHandler);
 
 
 // =====================================================
@@ -403,6 +413,32 @@ cron.schedule(
       console.log("✅ [CRON] Resultado nova palavra:", data);
     } catch (error) {
       console.error("❌ [CRON] Erro ao enviar push de nova palavra:", error);
+    }
+  },
+  { timezone: TZ },
+);
+
+/**
+ * DESCOBERTA DE TRILHAS — push diário rotativo das telas de estudo
+ * ⏰ Todo dia às 10:00 (SP)
+ *
+ * Rotaciona por um catálogo de 15 mensagens (3 por tela), intercalando as
+ * seções: 1 push por dia, ciclo de 15 dias. Para ajustar os textos, edite
+ * o CATALOGO em api/descobertaTrilhas.ts.
+ */
+cron.schedule(
+  "0 10 * * *",
+  async () => {
+    console.log("⏰ [CRON] Push de descoberta de trilhas (10:00 SP)...");
+    try {
+      const response = await fetch(
+        "https://mndd-backend-8hr0.onrender.com/trilhas/descoberta-push",
+        { method: "POST" },
+      );
+      const data = await response.text();
+      console.log("✅ [CRON] Resultado descoberta de trilhas:", data);
+    } catch (error) {
+      console.error("❌ [CRON] Erro no push de descoberta de trilhas:", error);
     }
   },
   { timezone: TZ },

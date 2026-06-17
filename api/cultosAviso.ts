@@ -164,6 +164,7 @@ export default async function cultosAvisoHandler(_req: Request, res: Response) {
           sound: "default",
           title: "🔔 Hoje tem Culto!",
           body: `${culto.tipo || "Culto"} 📍 ${culto.local || "igreja"}`,
+          data: { type: "culto", screen: "Igreja" },
         }));
 
         const expoResult = await sendExpoInChunks(messages);
